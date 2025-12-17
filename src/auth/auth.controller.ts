@@ -1,7 +1,7 @@
 import { Controller, Get, Req, UseGuards } from "@nestjs/common";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { AuthService } from "./auth.service";
-import type { Request } from "express";
+import type { RequestWithUser } from "./interfaces/request-with-user.interface";
 
 @Controller("auth")
 export class AuthController {
@@ -15,7 +15,7 @@ export class AuthController {
 
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
-  googleCallback(@Req() req: any) {
+  googleCallback(@Req() req: RequestWithUser) {
     return this.authService.handleGoogleLogin(req.user);
   }
 }

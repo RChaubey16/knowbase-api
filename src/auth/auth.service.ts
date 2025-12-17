@@ -1,14 +1,9 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { GoogleUser } from "./interfaces/google-user.interface";
 
 @Injectable()
 export class AuthService {
-  handleGoogleLogin(googleUser: {
-    googleId: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    avatar: string;
-  }) {
+  handleGoogleLogin(googleUser: GoogleUser) {
     if (!googleUser?.email) {
       throw new UnauthorizedException();
     }
