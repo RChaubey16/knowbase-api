@@ -6,7 +6,7 @@ import type { JwtUser } from "src/auth/interfaces/jwt-user.interface";
 @Controller("users")
 export class UsersController {
   @UseGuards(JwtAuthGuard)
-  @Get()
+  @Get("profile")
   getProfile(@Req() req: Request & { user: JwtUser }): JwtUser {
     return req.user;
   }
