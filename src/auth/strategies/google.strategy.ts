@@ -1,14 +1,33 @@
 import { PassportStrategy } from "@nestjs/passport";
 import { Injectable } from "@nestjs/common";
 import { Strategy, Profile } from "passport-google-oauth20";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, "google") {
-  constructor() {
+  constructor(configService: ConfigService) {
+    const GOOGLE_AUTH_CLIENT_ID = configService.get<string>(
+      "GOOGLE_AUTH_CLIENT_ID",
+    );
+    const GOOGLE_AUTH_CLIENT_SECRET = configService.get<string>(
+      "GOOGLE_AUTH_CLIENT_SECRET",
+    );
+    const GOOGLE_AUTH_CALLBACK_URL = configService.get<string>(
+      "GOOGLE_AUTH_CALLBACK_URL",
+    );
+
+    if (
+      !GOOGLE_AUTH_CLIENT_ID ||
+      !GOOGLE_AUTH_CLIENT_SECRET ||
+      !GOOGLE_AUTH_CALLBACK_URL
+    ) {
+      throw new Error("Google Auth credentials are not defined");
+    }
+
     super({
-      clientID: process.env.GOOGLE_AUTH_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_AUTH_CLIENT_SECRET!,
-      callbackURL: process.env.GOOGLE_AUTH_CALLBACK_URL!,
+      clientID: GOOGLE_AUTH_CLIENT_ID,
+      clientSecret: GOOGLE_AUTH_CLIENT_SECRET,
+      callbackURL: GOOGLE_AUTH_CALLBACK_URL,
       scope: ["email", "profile"],
     });
   }
