@@ -26,7 +26,7 @@ describe("WorkspacesService", () => {
     expect(service).toBeDefined();
   });
 
-  describe("findAllByUser", () => {
+  describe("findAllWorkspacesByUser", () => {
     it("should return workspaces for a user", async () => {
       const userId = "user-123";
       const mockWorkspaces = [{ id: "ws-1", name: "Workspace 1" }];
@@ -43,7 +43,7 @@ describe("WorkspacesService", () => {
 
       Object.assign(service, { db: dbMock });
 
-      const result = await service.findAllByUser(userId);
+      const result = await service.findAllWorkspacesByUser(userId);
 
       expect(result).toEqual(mockWorkspaces);
       expect(dbMock.select).toHaveBeenCalled();

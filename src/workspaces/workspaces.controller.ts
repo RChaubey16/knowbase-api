@@ -20,6 +20,6 @@ export class WorkspacesController {
   @UseGuards(JwtAuthGuard)
   @Get("all")
   findAll(@Req() req: RequestWithJwtUser) {
-    return this.workspacesService.findAllByUser(req.user.userId);
+    return this.workspacesService.findAllWorkspacesByUser(req.user.userId);
   }
 }

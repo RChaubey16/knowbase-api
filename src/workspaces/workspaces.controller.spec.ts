@@ -1,6 +1,7 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { WorkspacesController } from "./workspaces.controller";
 import { WorkspacesService } from "./workspaces.service";
+import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 
 describe("WorkspacesController", () => {
   let controller: WorkspacesController;
@@ -14,7 +15,7 @@ describe("WorkspacesController", () => {
           provide: WorkspacesService,
           useValue: {
             create: jest.fn(),
-            findAllByUser: jest.fn(),
+            findAllWorkspacesByUser: jest.fn(),
           },
         },
       ],
@@ -33,16 +34,20 @@ describe("WorkspacesController", () => {
       const userId = "user-123";
       const mockWorkspaces = [
         { id: "ws-1", name: "Workspace 1" },
-      ] as unknown as Awaited<ReturnType<WorkspacesService["findAllByUser"]>>;
-      jest.spyOn(service, "findAllByUser").mockResolvedValue(mockWorkspaces);
+      ] as unknown as Awaited<
+        ReturnType<WorkspacesService["findAllWorkspacesByUser"]>
+      >;
+      jest
+        .spyOn(service, "findAllWorkspacesByUser")
+        .mockResolvedValue(mockWorkspaces);
 
       const result = await controller.findAll({
         user: { userId, email: "test@example.com" },
-      } as any);
+      } as RequestWithJwtUser);
 
       expect(result).toEqual(mockWorkspaces);
       // eslint-disable-next-line @typescript-eslint/unbound-method
-      expect(service.findAllByUser).toHaveBeenCalledWith(userId);
+      expect(service.findAllWorkspacesByUser).toHaveBeenCalledWith(userId);
     });
   });
 });

@@ -16,7 +16,7 @@ export class WorkspacesService {
    * @param userId The ID of the user.
    * @returns A list of workspaces.
    */
-  async findAllByUser(userId: string) {
+  async findAllWorkspacesByUser(userId: string) {
     const results = await this.db
       .select({
         workspace: workspaces,
