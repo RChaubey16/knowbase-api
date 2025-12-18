@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import { eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "../db/schema/";
@@ -9,6 +10,26 @@ import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 @Injectable()
 export class WorkspacesService {
   constructor(@Inject("DB") private db: PostgresJsDatabase<typeof schema>) {}
+
+  /**
+   * Finds all workspaces the user is a member of.
+   * @param userId The ID of the user.
+   * @returns A list of workspaces.
+   */
+  async findAllByUser(userId: string) {
+    const results = await this.db
+      .select({
+        workspace: workspaces,
+      })
+      .from(workspaces)
+      .innerJoin(
+        workspaceMembers,
+        eq(workspaces.id, workspaceMembers.workspaceId),
+      )
+      .where(eq(workspaceMembers.userId, userId));
+
+    return results.map((r) => r.workspace);
+  }
 
   /**
    * Creates a new workspace for the user.

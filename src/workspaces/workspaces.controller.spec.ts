@@ -13,6 +13,7 @@ describe("WorkspacesController", () => {
           provide: WorkspacesService,
           useValue: {
             create: jest.fn(),
+            findAllByUser: jest.fn(),
           },
         },
       ],
@@ -23,5 +24,21 @@ describe("WorkspacesController", () => {
 
   it("should be defined", () => {
     expect(controller).toBeDefined();
+  });
+
+  describe("findAll", () => {
+    it("should return workspaces for the user", async () => {
+      const userId = "user-123";
+      const mockWorkspaces = [{ id: "ws-1", name: "Workspace 1" }];
+      const service = (controller as any)["workspacesService"];
+      jest.spyOn(service, "findAllByUser").mockResolvedValue(mockWorkspaces);
+
+      const result = await controller.findAll({
+        user: { userId, email: "test@example.com" },
+      } as any);
+
+      expect(result).toEqual(mockWorkspaces);
+      expect(service.findAllByUser).toHaveBeenCalledWith(userId);
+    });
   });
 });
