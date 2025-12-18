@@ -8,6 +8,13 @@
       "when": 1765975374599,
       "tag": "0000_far_thunderbird",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1766032661443,
+      "tag": "0001_tidy_madame_masque",
+      "breakpoints": true
     }
   ]
 }

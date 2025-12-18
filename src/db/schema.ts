@@ -15,5 +15,7 @@ export const users = pgTable("users", {
 
   provider: text("provider").notNull(), // 'local' | 'google'
 
+  refreshTokenHash: text("refresh_token_hash"),
+
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
