@@ -41,7 +41,7 @@ describe("WorkspacesService", () => {
         ),
       };
 
-      (service as any)["db"] = dbMock;
+      Object.assign(service, { db: dbMock });
 
       const result = await service.findAllByUser(userId);
 

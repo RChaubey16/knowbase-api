@@ -4,6 +4,7 @@ import { WorkspacesService } from "./workspaces.service";
 
 describe("WorkspacesController", () => {
   let controller: WorkspacesController;
+  let service: WorkspacesService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -20,6 +21,7 @@ describe("WorkspacesController", () => {
     }).compile();
 
     controller = module.get<WorkspacesController>(WorkspacesController);
+    service = module.get<WorkspacesService>(WorkspacesService);
   });
 
   it("should be defined", () => {
@@ -29,8 +31,9 @@ describe("WorkspacesController", () => {
   describe("findAll", () => {
     it("should return workspaces for the user", async () => {
       const userId = "user-123";
-      const mockWorkspaces = [{ id: "ws-1", name: "Workspace 1" }];
-      const service = (controller as any)["workspacesService"];
+      const mockWorkspaces = [
+        { id: "ws-1", name: "Workspace 1" },
+      ] as unknown as Awaited<ReturnType<WorkspacesService["findAllByUser"]>>;
       jest.spyOn(service, "findAllByUser").mockResolvedValue(mockWorkspaces);
 
       const result = await controller.findAll({
@@ -38,6 +41,7 @@ describe("WorkspacesController", () => {
       } as any);
 
       expect(result).toEqual(mockWorkspaces);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(service.findAllByUser).toHaveBeenCalledWith(userId);
     });
   });
