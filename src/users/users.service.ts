@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import * as schema from "../db/schema";
-import { users } from "../db/schema";
+
+import * as schema from "../db/schema/";
+import { users } from "../db/schema/users";
 
 @Injectable()
 export class UsersService {

@@ -4,7 +4,7 @@ import * as bcrypt from "bcrypt";
 
 import { GoogleUser } from "./interfaces/google-user.interface";
 import { UsersService } from "src/users/users.service";
-import { users } from "../db/schema";
+import { users } from "../db/schema/users";
 
 @Injectable()
 export class AuthService {
