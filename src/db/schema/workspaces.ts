@@ -1,5 +1,6 @@
 import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
 import { users } from "./users";
+import { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export const workspaces = pgTable("workspaces", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -12,3 +13,6 @@ export const workspaces = pgTable("workspaces", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export type Workspace = InferSelectModel<typeof workspaces>;
+export type NewWorkspace = InferInsertModel<typeof workspaces>;
