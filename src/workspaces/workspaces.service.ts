@@ -1,5 +1,5 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "../db/schema/";
@@ -62,5 +62,28 @@ export class WorkspacesService {
 
       return workspace;
     });
+  }
+
+  /**
+   * Creates a new workspace for the user.
+   * @param userId The ID of the user deleting the workspace.
+   * @param workspaceId The ID of the workspace to delete.
+   * @returns The deleted workspace.
+   */
+  async deleteWorkspace(userId: string, workspaceId: string) {
+    const deleted = await this.db
+      .delete(workspaces)
+      .where(
+        and(eq(workspaces.id, workspaceId), eq(workspaces.ownerId, userId)),
+      )
+      .returning({ id: workspaces.id });
+
+    if (deleted.length === 0) {
+      throw new ForbiddenException(
+        "Workspace not found or you are not the owner",
+      );
+    }
+
+    return { success: true };
   }
 }
