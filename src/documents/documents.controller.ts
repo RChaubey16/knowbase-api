@@ -7,11 +7,13 @@ import {
   Req,
   Get,
   Query,
+  Put,
 } from "@nestjs/common";
 import { DocumentsService } from "./documents.service";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import type { RequestWithJwtUser } from "src/auth/interfaces/request-with-jwt-user.interface";
+import { UpdateDocumentDto } from "./dto/update-document.dto";
 
 @Controller("workspaces/:workspaceId/documents")
 @UseGuards(JwtAuthGuard)
@@ -52,6 +54,21 @@ export class DocumentsController {
   ) {
     return this.documentsService.createDocument(
       workspaceId,
+      req.user.userId,
+      dto,
+    );
+  }
+
+  @Put(":documentId")
+  async updateDocument(
+    @Param("workspaceId") workspaceId: string,
+    @Param("documentId") documentId: string,
+    @Body() dto: UpdateDocumentDto,
+    @Req() req: RequestWithJwtUser,
+  ) {
+    return this.documentsService.updateDocument(
+      workspaceId,
+      documentId,
       req.user.userId,
       dto,
     );

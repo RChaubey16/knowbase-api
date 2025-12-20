@@ -8,6 +8,7 @@ import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq, isNull, desc } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { CreateDocumentDto } from "./dto/create-document.dto";
+import { UpdateDocumentDto } from "./dto/update-document.dto";
 
 @Injectable()
 export class DocumentsService {
@@ -140,6 +141,59 @@ export class DocumentsService {
     }
 
     return result[0];
+  }
+
+  async updateDocument(
+    workspaceId: string,
+    documentId: string,
+    userId: string,
+    dto: UpdateDocumentDto,
+  ) {
+    // 1. Permission check
+    await this.assertWorkspaceAccess(workspaceId, userId);
+
+    // 2. Transaction
+    const updated = await this.db.transaction(async (tx) => {
+      // 2.1 Update document metadata
+      const [doc] = await tx
+        .update(schema.documents)
+        .set({
+          title: dto.title.trim(),
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(schema.documents.id, documentId),
+            eq(schema.documents.workspaceId, workspaceId),
+            isNull(schema.documents.archivedAt),
+          ),
+        )
+        .returning({
+          id: schema.documents.id,
+          title: schema.documents.title,
+          type: schema.documents.type,
+          status: schema.documents.status,
+          createdAt: schema.documents.createdAt,
+          updatedAt: schema.documents.updatedAt,
+        });
+
+      if (!doc) {
+        throw new NotFoundException("Document not found");
+      }
+
+      // 2.2 Update document content
+      await tx
+        .update(schema.documentContents)
+        .set({
+          rawContent: dto.content,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.documentContents.documentId, documentId));
+
+      return doc;
+    });
+
+    return updated;
   }
 
   /**
