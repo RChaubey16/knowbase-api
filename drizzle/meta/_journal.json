@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1765975374599,
-      "tag": "0000_far_thunderbird",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1766032661443,
-      "tag": "0001_tidy_madame_masque",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1766036738539,
-      "tag": "0002_real_steel_serpent",
+      "when": 1766226800264,
+      "tag": "0000_deep_sway",
       "breakpoints": true
     }
   ]
