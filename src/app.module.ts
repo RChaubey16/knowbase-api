@@ -6,6 +6,7 @@ import { AppService } from "./app.service";
 import { DbModule } from "./db/db.module";
 import { AuthModule } from "./auth/auth.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
     DbModule,
     AuthModule,
     WorkspacesModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
