@@ -8,6 +8,8 @@ import {
   Get,
   Query,
   Put,
+  Delete,
+  HttpCode,
 } from "@nestjs/common";
 import { DocumentsService } from "./documents.service";
 import { CreateDocumentDto } from "./dto/create-document.dto";
@@ -71,6 +73,20 @@ export class DocumentsController {
       documentId,
       req.user.userId,
       dto,
+    );
+  }
+
+  @Delete(":documentId")
+  @HttpCode(204)
+  async archiveDocument(
+    @Param("workspaceId") workspaceId: string,
+    @Param("documentId") documentId: string,
+    @Req() req: RequestWithJwtUser,
+  ) {
+    await this.documentsService.archiveDocument(
+      workspaceId,
+      documentId,
+      req.user.userId,
     );
   }
 }

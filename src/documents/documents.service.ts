@@ -196,6 +196,34 @@ export class DocumentsService {
     return updated;
   }
 
+  async archiveDocument(
+    workspaceId: string,
+    documentId: string,
+    userId: string,
+  ) {
+    // 1. Permission check
+    await this.assertWorkspaceAccess(workspaceId, userId);
+
+    // 2. Soft delete
+    const result = await this.db
+      .update(schema.documents)
+      .set({
+        archivedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(schema.documents.id, documentId),
+          eq(schema.documents.workspaceId, workspaceId),
+          isNull(schema.documents.archivedAt),
+        ),
+      )
+      .returning({ id: schema.documents.id });
+
+    if (result.length === 0) {
+      throw new NotFoundException("Document not found");
+    }
+  }
+
   /**
    * Asserts that the user has access to the workspace
    * @param workspaceId Workspace ID
