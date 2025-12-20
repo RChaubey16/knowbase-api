@@ -31,6 +31,19 @@ export class DocumentsController {
     );
   }
 
+  @Get(":documentId")
+  async getDocumentById(
+    @Param("workspaceId") workspaceId: string,
+    @Param("documentId") documentId: string,
+    @Req() req: RequestWithJwtUser,
+  ) {
+    return this.documentsService.getDocumentById(
+      workspaceId,
+      documentId,
+      req.user.userId,
+    );
+  }
+
   @Post()
   async createDocument(
     @Param("workspaceId") workspaceId: string,

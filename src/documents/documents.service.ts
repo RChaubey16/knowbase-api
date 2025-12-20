@@ -1,4 +1,8 @@
-import { Injectable, ForbiddenException } from "@nestjs/common";
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from "@nestjs/common";
 import { Inject } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq, isNull, desc } from "drizzle-orm";
@@ -89,6 +93,53 @@ export class DocumentsService {
     return {
       items: documents,
     };
+  }
+
+  /**
+   * Gets a document by ID
+   * @param workspaceId Workspace ID
+   * @param documentId Document ID
+   * @param userId User ID
+   * @returns Document
+   */
+  async getDocumentById(
+    workspaceId: string,
+    documentId: string,
+    userId: string,
+  ) {
+    // 1. Permission check
+    await this.assertWorkspaceAccess(workspaceId, userId);
+
+    // 2. Fetch document + content
+    const result = await this.db
+      .select({
+        id: schema.documents.id,
+        title: schema.documents.title,
+        type: schema.documents.type,
+        status: schema.documents.status,
+        createdAt: schema.documents.createdAt,
+        updatedAt: schema.documents.updatedAt,
+        content: schema.documentContents.rawContent,
+      })
+      .from(schema.documents)
+      .innerJoin(
+        schema.documentContents,
+        eq(schema.documents.id, schema.documentContents.documentId),
+      )
+      .where(
+        and(
+          eq(schema.documents.id, documentId),
+          eq(schema.documents.workspaceId, workspaceId),
+          isNull(schema.documents.archivedAt),
+        ),
+      )
+      .limit(1);
+
+    if (result.length === 0) {
+      throw new NotFoundException("Document not found");
+    }
+
+    return result[0];
   }
 
   /**
