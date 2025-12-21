@@ -16,11 +16,8 @@ export const documents = pgTable("documents", {
     .references(() => users.id, { onDelete: "set null" }),
 
   title: text("title").notNull(),
-
   type: documentTypeEnum("type").notNull().default("text"),
-
   status: documentStatusEnum("status").notNull().default("ready"),
-
   source: text("source"), // "manual", "url", later useful
 
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -45,7 +42,6 @@ export const documentContents = pgTable("document_contents", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
-
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .defaultNow()
     .notNull(),

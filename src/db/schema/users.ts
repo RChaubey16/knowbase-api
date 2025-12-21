@@ -9,11 +9,9 @@ export const users = pgTable("users", {
   lastName: text("last_name"),
   avatar: text("avatar"),
 
-  password: text("password"), // nullable for OAuth
-
+  password: text("password"),
   googleId: text("google_id"),
-
-  provider: text("provider").notNull(), // 'local' | 'google'
+  provider: text("provider").notNull(),
 
   refreshTokenHash: text("refresh_token_hash"),
 

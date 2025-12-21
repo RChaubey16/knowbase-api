@@ -1,9 +1,15 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
-export const workspaceRoleEnum = pgEnum("workspace_role", [
+export const organisationRoleEnum = pgEnum("organisation_role", [
   "owner",
   "admin",
   "member",
+]);
+
+export const workspaceRoleEnum = pgEnum("workspace_role", [
+  "admin",
+  "editor",
+  "viewer",
 ]);
 
 export const documentTypeEnum = pgEnum("document_type", ["text", "url", "pdf"]);

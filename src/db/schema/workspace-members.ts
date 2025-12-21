@@ -1,6 +1,6 @@
 import { pgTable, uuid, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
-import { users } from "./users";
+import { organisationMembers } from "./organisation-members";
 import { workspaceRoleEnum } from "./enums";
 
 export const workspaceMembers = pgTable(
@@ -12,19 +12,18 @@ export const workspaceMembers = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
 
-    userId: uuid("user_id")
+    organisationMemberId: uuid("organisation_member_id")
       .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
+      .references(() => organisationMembers.id, { onDelete: "cascade" }),
 
-    role: workspaceRoleEnum("role").notNull().default("member"),
+    role: workspaceRoleEnum("role").notNull().default("viewer"),
 
     joinedAt: timestamp("joined_at").defaultNow().notNull(),
   },
-  // Below code, ensures a user can belong to a workspace only once (no duplicate memberships)
   (table) => ({
-    uniqueMember: uniqueIndex("workspace_user_unique").on(
+    uniqueWorkspaceMember: uniqueIndex("workspace_org_member_unique").on(
       table.workspaceId,
-      table.userId,
+      table.organisationMemberId,
     ),
   }),
 );
