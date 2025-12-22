@@ -2,61 +2,80 @@ import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import { and, eq } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
-import * as schema from "../db/schema/";
+import * as schema from "../db/schema";
 import { workspaces } from "../db/schema/workspaces";
 import { workspaceMembers } from "../db/schema/workspace-members";
+import { organisationMembers } from "../db/schema/organisation-members";
 import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 
 @Injectable()
 export class WorkspacesService {
   constructor(@Inject("DB") private db: PostgresJsDatabase<typeof schema>) {}
 
-  /**
-   * Finds all workspaces the user is a member of.
-   * @param userId The ID of the user.
-   * @returns A list of workspaces.
-   */
-  async findAllWorkspacesByUser(userId: string) {
-    const results = await this.db
-      .select({
-        workspace: workspaces,
-      })
+  async findAllByOrganisation(userId: string, organisationId: string) {
+    return this.db
+      .selectDistinct({ workspace: workspaces })
       .from(workspaces)
       .innerJoin(
         workspaceMembers,
         eq(workspaces.id, workspaceMembers.workspaceId),
       )
-      .where(eq(workspaceMembers.userId, userId));
-
-    return results.map((r) => r.workspace);
+      .innerJoin(
+        organisationMembers,
+        eq(workspaceMembers.organisationMemberId, organisationMembers.id),
+      )
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(workspaces.organisationId, organisationId),
+        ),
+      )
+      .then((r) => r.map((x) => x.workspace));
   }
 
-  /**
-   * Creates a new workspace for the user.
-   * @param userId The ID of the user creating the workspace.
-   * @param createWorkspaceDto The data transfer object containing the workspace name.
-   * @returns The created workspace.
-   */
-  async create(userId: string, createWorkspaceDto: CreateWorkspaceDto) {
-    const { name } = createWorkspaceDto;
-    const slug =
-      name.toLowerCase().replace(/ /g, "-") +
-      "-" +
-      Math.random().toString(36).substring(2, 7);
+  async create(
+    userId: string,
+    organisationId: string,
+    dto: CreateWorkspaceDto,
+  ) {
+    // 1️⃣ Ensure user belongs to organisation
+    const [orgMember] = await this.db
+      .select()
+      .from(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(organisationMembers.organisationId, organisationId),
+        ),
+      );
 
-    return await this.db.transaction(async (tx) => {
+    if (!orgMember) {
+      throw new ForbiddenException("You are not a member of this organisation");
+    }
+
+    // 2️⃣ Create workspace
+    const slug =
+      dto.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "") +
+      "-" +
+      crypto.randomUUID().slice(0, 8);
+
+    return this.db.transaction(async (tx) => {
       const [workspace] = await tx
         .insert(workspaces)
         .values({
-          name,
+          name: dto.name,
           slug,
-          ownerId: userId,
+          organisationId,
         })
         .returning();
 
+      // Creator becomes workspace owner
       await tx.insert(workspaceMembers).values({
         workspaceId: workspace.id,
-        userId,
+        organisationMemberId: orgMember.id,
         role: "owner",
       });
 
@@ -64,25 +83,36 @@ export class WorkspacesService {
     });
   }
 
-  /**
-   * Creates a new workspace for the user.
-   * @param userId The ID of the user deleting the workspace.
-   * @param workspaceId The ID of the workspace to delete.
-   * @returns The deleted workspace.
-   */
-  async deleteWorkspace(userId: string, workspaceId: string) {
-    const deleted = await this.db
-      .delete(workspaces)
-      .where(
-        and(eq(workspaces.id, workspaceId), eq(workspaces.ownerId, userId)),
+  async deleteWorkspace(
+    userId: string,
+    organisationId: string,
+    workspaceId: string,
+  ) {
+    // Must be workspace owner
+    const [member] = await this.db
+      .select()
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+      .innerJoin(
+        organisationMembers,
+        eq(workspaceMembers.organisationMemberId, organisationMembers.id),
       )
-      .returning({ id: workspaces.id });
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(workspaceMembers.role, "owner"),
+          eq(workspaces.organisationId, organisationId),
+          eq(workspaces.id, workspaceId),
+        ),
+      );
 
-    if (deleted.length === 0) {
+    if (!member) {
       throw new ForbiddenException(
-        "Workspace not found or you are not the owner",
+        "Workspace not found or insufficient permissions",
       );
     }
+
+    await this.db.delete(workspaces).where(eq(workspaces.id, workspaceId));
 
     return { success: true };
   }

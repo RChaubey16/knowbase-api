@@ -7,6 +7,7 @@ export const organisationRoleEnum = pgEnum("organisation_role", [
 ]);
 
 export const workspaceRoleEnum = pgEnum("workspace_role", [
+  "owner",
   "admin",
   "editor",
   "viewer",

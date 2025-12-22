@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   Post,
   Req,
@@ -11,30 +12,37 @@ import {
 import { WorkspacesService } from "./workspaces.service";
 import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
+import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
+import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
 
 @Controller("workspaces")
+@UseGuards(JwtAuthGuard, OrganisationContextGuard)
 export class WorkspacesController {
   constructor(private readonly workspacesService: WorkspacesService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Post("create")
-  create(
-    @Req() req: RequestWithJwtUser,
-    @Body() createWorkspaceDto: CreateWorkspaceDto,
-  ) {
-    return this.workspacesService.create(req.user.userId, createWorkspaceDto);
+  @Post()
+  create(@Req() req: RequestWithJwtAndOrg, @Body() dto: CreateWorkspaceDto) {
+    return this.workspacesService.create(
+      req.user.userId,
+      req.organisation.organisationId,
+      dto,
+    );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @Get()
+  findAll(@Req() req: RequestWithJwtAndOrg) {
+    return this.workspacesService.findAllByOrganisation(
+      req.user.userId,
+      req.organisation.organisationId,
+    );
+  }
+
   @Delete(":id")
-  delete(@Param("id") workspaceId: string, @Req() req: RequestWithJwtUser) {
-    return this.workspacesService.deleteWorkspace(req.user.userId, workspaceId);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get("all")
-  findAll(@Req() req: RequestWithJwtUser) {
-    return this.workspacesService.findAllWorkspacesByUser(req.user.userId);
+  delete(@Req() req: RequestWithJwtAndOrg, @Param("id") workspaceId: string) {
+    return this.workspacesService.deleteWorkspace(
+      req.user.userId,
+      req.organisation.organisationId,
+      workspaceId,
+    );
   }
 }

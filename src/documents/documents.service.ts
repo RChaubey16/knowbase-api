@@ -2,8 +2,8 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  Inject,
 } from "@nestjs/common";
-import { Inject } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq, isNull, desc } from "drizzle-orm";
 import * as schema from "../db/schema";
@@ -17,28 +17,24 @@ export class DocumentsService {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  /**
-   * Creates a document in a workspace
-   * @param workspaceId Workspace ID
-   * @param userId User ID
-   * @param dto Document data
-   * @returns Created document
-   */
   async createDocument(
     workspaceId: string,
-    userId: string,
+    organisationId: string,
+    organisationMemberId: string,
     dto: CreateDocumentDto,
   ) {
-    // 1. Permission check
-    await this.assertWorkspaceAccess(workspaceId, userId);
+    await this.assertWorkspaceAccess(
+      workspaceId,
+      organisationId,
+      organisationMemberId,
+    );
 
-    // 2. Transaction
     const [document] = await this.db.transaction(async (tx) => {
       const [doc] = await tx
         .insert(schema.documents)
         .values({
           workspaceId,
-          createdBy: userId,
+          createdBy: organisationMemberId,
           title: dto.title.trim(),
           type: "text",
           status: "ready",
@@ -57,61 +53,54 @@ export class DocumentsService {
     return document;
   }
 
-  /**
-   * Lists documents in a workspace
-   * @param workspaceId Workspace ID
-   * @param userId User ID
-   * @param limit Limit of documents to return
-   * @returns List of documents
-   */
-  async listDocuments(workspaceId: string, userId: string, limit: number) {
-    // 1. Permission check
-    await this.assertWorkspaceAccess(workspaceId, userId);
+  async listDocuments(
+    workspaceId: string,
+    organisationId: string,
+    organisationMemberId: string,
+    limit: number,
+  ) {
+    await this.assertWorkspaceAccess(
+      workspaceId,
+      organisationId,
+      organisationMemberId,
+    );
 
-    // 2. Safe limit
     const safeLimit = Math.min(limit, 50);
 
-    // 3. Fetch documents
-    const documents = await this.db
-      .select({
-        id: schema.documents.id,
-        title: schema.documents.title,
-        type: schema.documents.type,
-        status: schema.documents.status,
-        createdAt: schema.documents.createdAt,
-        updatedAt: schema.documents.updatedAt,
-      })
-      .from(schema.documents)
-      .where(
-        and(
-          eq(schema.documents.workspaceId, workspaceId),
-          isNull(schema.documents.archivedAt),
-        ),
-      )
-      .orderBy(desc(schema.documents.updatedAt))
-      .limit(safeLimit);
-
     return {
-      items: documents,
+      items: await this.db
+        .select({
+          id: schema.documents.id,
+          title: schema.documents.title,
+          type: schema.documents.type,
+          status: schema.documents.status,
+          createdAt: schema.documents.createdAt,
+          updatedAt: schema.documents.updatedAt,
+        })
+        .from(schema.documents)
+        .where(
+          and(
+            eq(schema.documents.workspaceId, workspaceId),
+            isNull(schema.documents.archivedAt),
+          ),
+        )
+        .orderBy(desc(schema.documents.updatedAt))
+        .limit(safeLimit),
     };
   }
 
-  /**
-   * Gets a document by ID
-   * @param workspaceId Workspace ID
-   * @param documentId Document ID
-   * @param userId User ID
-   * @returns Document
-   */
   async getDocumentById(
     workspaceId: string,
     documentId: string,
-    userId: string,
+    organisationId: string,
+    organisationMemberId: string,
   ) {
-    // 1. Permission check
-    await this.assertWorkspaceAccess(workspaceId, userId);
+    await this.assertWorkspaceAccess(
+      workspaceId,
+      organisationId,
+      organisationMemberId,
+    );
 
-    // 2. Fetch document + content
     const result = await this.db
       .select({
         id: schema.documents.id,
@@ -136,7 +125,7 @@ export class DocumentsService {
       )
       .limit(1);
 
-    if (result.length === 0) {
+    if (!result.length) {
       throw new NotFoundException("Document not found");
     }
 
@@ -146,15 +135,17 @@ export class DocumentsService {
   async updateDocument(
     workspaceId: string,
     documentId: string,
-    userId: string,
+    organisationId: string,
+    organisationMemberId: string,
     dto: UpdateDocumentDto,
   ) {
-    // 1. Permission check
-    await this.assertWorkspaceAccess(workspaceId, userId);
+    await this.assertWorkspaceAccess(
+      workspaceId,
+      organisationId,
+      organisationMemberId,
+    );
 
-    // 2. Transaction
     const updated = await this.db.transaction(async (tx) => {
-      // 2.1 Update document metadata
       const [doc] = await tx
         .update(schema.documents)
         .set({
@@ -168,20 +159,12 @@ export class DocumentsService {
             isNull(schema.documents.archivedAt),
           ),
         )
-        .returning({
-          id: schema.documents.id,
-          title: schema.documents.title,
-          type: schema.documents.type,
-          status: schema.documents.status,
-          createdAt: schema.documents.createdAt,
-          updatedAt: schema.documents.updatedAt,
-        });
+        .returning();
 
       if (!doc) {
         throw new NotFoundException("Document not found");
       }
 
-      // 2.2 Update document content
       await tx
         .update(schema.documentContents)
         .set({
@@ -199,17 +182,18 @@ export class DocumentsService {
   async archiveDocument(
     workspaceId: string,
     documentId: string,
-    userId: string,
+    organisationId: string,
+    organisationMemberId: string,
   ) {
-    // 1. Permission check
-    await this.assertWorkspaceAccess(workspaceId, userId);
+    await this.assertWorkspaceAccess(
+      workspaceId,
+      organisationId,
+      organisationMemberId,
+    );
 
-    // 2. Soft delete
     const result = await this.db
       .update(schema.documents)
-      .set({
-        archivedAt: new Date(),
-      })
+      .set({ archivedAt: new Date() })
       .where(
         and(
           eq(schema.documents.id, documentId),
@@ -217,26 +201,36 @@ export class DocumentsService {
           isNull(schema.documents.archivedAt),
         ),
       )
-      .returning({ id: schema.documents.id });
+      .returning();
 
-    if (result.length === 0) {
+    if (!result.length) {
       throw new NotFoundException("Document not found");
     }
   }
 
   /**
-   * Asserts that the user has access to the workspace
-   * @param workspaceId Workspace ID
-   * @param userId User ID
+   * Workspace access via organisation membership
    */
-  private async assertWorkspaceAccess(workspaceId: string, userId: string) {
+  private async assertWorkspaceAccess(
+    workspaceId: string,
+    organisationId: string,
+    organisationMemberId: string,
+  ) {
     const [member] = await this.db
       .select()
       .from(schema.workspaceMembers)
+      .innerJoin(
+        schema.workspaces,
+        eq(schema.workspaceMembers.workspaceId, schema.workspaces.id),
+      )
       .where(
         and(
           eq(schema.workspaceMembers.workspaceId, workspaceId),
-          eq(schema.workspaceMembers.userId, userId),
+          eq(
+            schema.workspaceMembers.organisationMemberId,
+            organisationMemberId,
+          ),
+          eq(schema.workspaces.organisationId, organisationId),
         ),
       )
       .limit(1);

@@ -7,6 +7,7 @@ import { DbModule } from "./db/db.module";
 import { AuthModule } from "./auth/auth.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { DocumentsModule } from "./documents/documents.module";
+import { OrganisationsModule } from "./organisations/organisations.module";
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DocumentsModule } from "./documents/documents.module";
     AuthModule,
     WorkspacesModule,
     DocumentsModule,
+    OrganisationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
