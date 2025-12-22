@@ -17,6 +17,14 @@ export class DocumentsService {
     private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  /**
+   * Creates a new document in a workspace
+   * @param workspaceId The ID of the workspace
+   * @param organisationId The ID of the organisation
+   * @param organisationMemberId The ID of the organisation member
+   * @param dto The document creation data transfer object
+   * @returns The created document
+   */
   async createDocument(
     workspaceId: string,
     organisationId: string,
@@ -34,7 +42,7 @@ export class DocumentsService {
         .insert(schema.documents)
         .values({
           workspaceId,
-          createdBy: organisationMemberId,
+          createdByMemberId: organisationMemberId,
           title: dto.title.trim(),
           type: "text",
           status: "ready",
@@ -53,6 +61,14 @@ export class DocumentsService {
     return document;
   }
 
+  /**
+   * Lists all documents in a workspace
+   * @param workspaceId The ID of the workspace
+   * @param organisationId The ID of the organisation
+   * @param organisationMemberId The ID of the organisation member
+   * @param limit The maximum number of documents to return
+   * @returns An array of documents
+   */
   async listDocuments(
     workspaceId: string,
     organisationId: string,
@@ -89,6 +105,14 @@ export class DocumentsService {
     };
   }
 
+  /**
+   * Gets a document by ID
+   * @param workspaceId The ID of the workspace
+   * @param documentId The ID of the document
+   * @param organisationId The ID of the organisation
+   * @param organisationMemberId The ID of the organisation member
+   * @returns The document
+   */
   async getDocumentById(
     workspaceId: string,
     documentId: string,
@@ -132,6 +156,15 @@ export class DocumentsService {
     return result[0];
   }
 
+  /**
+   * Updates a document
+   * @param workspaceId The ID of the workspace
+   * @param documentId The ID of the document
+   * @param organisationId The ID of the organisation
+   * @param organisationMemberId The ID of the organisation member
+   * @param dto The document update data transfer object
+   * @returns The updated document
+   */
   async updateDocument(
     workspaceId: string,
     documentId: string,
@@ -179,6 +212,13 @@ export class DocumentsService {
     return updated;
   }
 
+  /**
+   * Archives a document
+   * @param workspaceId The ID of the workspace
+   * @param documentId The ID of the document
+   * @param organisationId The ID of the organisation
+   * @param organisationMemberId The ID of the organisation member
+   */
   async archiveDocument(
     workspaceId: string,
     documentId: string,

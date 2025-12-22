@@ -13,6 +13,13 @@ export class OrganisationsService {
     private db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  /**
+   * Creates a new organisation for a user
+   * @param userId The ID of the user creating the organisation
+   * @param name The name of the organisation
+   * @param slug The slug of the organisation
+   * @returns The created organisation
+   */
   async createOrganisation(userId: string, name: string, slug: string) {
     // 🔒 Free-tier rule: user can own only ONE organisation
     const ownedOrgs = await this.db
@@ -48,6 +55,11 @@ export class OrganisationsService {
     return org;
   }
 
+  /**
+   * Lists all organisations for a user
+   * @param userId The ID of the user
+   * @returns An array of organisations
+   */
   async listUserOrganisations(userId: string) {
     return this.db
       .select({
@@ -64,6 +76,12 @@ export class OrganisationsService {
       .where(eq(organisationMembers.userId, userId));
   }
 
+  /**
+   * Checks if a user is a member of an organisation
+   * @param userId The ID of the user
+   * @param organisationId The ID of the organisation
+   * @returns True if the user is a member of the organisation, false otherwise
+   */
   async isUserMemberOfOrg(userId: string, organisationId: string) {
     const [member] = await this.db
       .select()

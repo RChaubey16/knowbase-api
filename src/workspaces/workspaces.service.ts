@@ -12,6 +12,12 @@ import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 export class WorkspacesService {
   constructor(@Inject("DB") private db: PostgresJsDatabase<typeof schema>) {}
 
+  /**
+   * Lists all workspaces for a user in an organisation
+   * @param userId The ID of the user
+   * @param organisationId The ID of the organisation
+   * @returns An array of workspaces
+   */
   async findAllByOrganisation(userId: string, organisationId: string) {
     return this.db
       .selectDistinct({ workspace: workspaces })
@@ -33,6 +39,13 @@ export class WorkspacesService {
       .then((r) => r.map((x) => x.workspace));
   }
 
+  /**
+   * Creates a new workspace for a user in an organisation
+   * @param userId The ID of the user
+   * @param organisationId The ID of the organisation
+   * @param dto The workspace creation data transfer object
+   * @returns The created workspace
+   */
   async create(
     userId: string,
     organisationId: string,
@@ -83,6 +96,13 @@ export class WorkspacesService {
     });
   }
 
+  /**
+   * Deletes a workspace for a user in an organisation
+   * @param userId The ID of the user
+   * @param organisationId The ID of the organisation
+   * @param workspaceId The ID of the workspace
+   * @returns The deleted workspace
+   */
   async deleteWorkspace(
     userId: string,
     organisationId: string,

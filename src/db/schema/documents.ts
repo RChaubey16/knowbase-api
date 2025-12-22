@@ -1,7 +1,7 @@
 import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
-import { users } from "./users";
 import { workspaces } from "./workspaces";
 import { documentTypeEnum, documentStatusEnum } from "./enums";
+import { organisationMembers } from "./organisation-members";
 
 // DOCUMENT
 export const documents = pgTable("documents", {
@@ -11,9 +11,9 @@ export const documents = pgTable("documents", {
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
 
-  createdBy: uuid("created_by")
+  createdByMemberId: uuid("created_by_member_id")
     .notNull()
-    .references(() => users.id, { onDelete: "set null" }),
+    .references(() => organisationMembers.id, { onDelete: "restrict" }),
 
   title: text("title").notNull(),
   type: documentTypeEnum("type").notNull().default("text"),
