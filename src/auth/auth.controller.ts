@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
@@ -7,6 +16,7 @@ import type { RequestWithGoogleUser } from "./interfaces/request-with-google-use
 import type { RequestWithJwtUser } from "./interfaces/request-with-jwt-user.interface";
 import { JwtPayload } from "./interfaces/jwt-payload.interface";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
+import type { Request, Response } from "express";
 
 @Controller("auth")
 export class AuthController {
@@ -23,20 +33,69 @@ export class AuthController {
 
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
-  googleCallback(@Req() req: RequestWithGoogleUser) {
-    return this.authService.handleGoogleLogin(req.user);
+  async googleCallback(
+    @Req() req: RequestWithGoogleUser,
+    @Res() res: Response,
+  ) {
+    const { accessToken, refreshToken } =
+      await this.authService.handleGoogleLogin(req.user);
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+    };
+
+    // Option A (recommended): httpOnly cookies
+    res.cookie("accessToken", accessToken, cookieOptions);
+
+    res.cookie("refreshToken", refreshToken, cookieOptions);
+
+    return res.redirect(process.env.FRONT_END_URL!);
   }
 
   @Post("refresh")
-  async refresh(@Body("refreshToken") refreshToken: string) {
+  async refresh(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = (req.cookies as Record<string, string> | undefined)
+      ?.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException();
+    }
+
     const payload = await this.jwtService.verifyAsync<JwtPayload>(
       refreshToken,
-      {
-        secret: process.env.JWT_REFRESH_SECRET,
-      },
+      { secret: process.env.JWT_REFRESH_SECRET },
     );
 
-    return this.authService.handleRefreshTokens(payload.sub, refreshToken);
+    const tokens = await this.authService.handleRefreshTokens(
+      payload.sub,
+      refreshToken,
+    );
+
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/",
+    };
+
+    // rotate cookies
+    res.cookie("accessToken", tokens.accessToken, cookieOptions);
+    res.cookie("refreshToken", tokens.refreshToken, cookieOptions);
+
+    return res.send({ success: true });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("me")
+  me(@Req() req: RequestWithJwtUser) {
+    return req.user;
+  }
+
+  @Get("debug-cookies")
+  debug(@Req() req: Request) {
+    return req.cookies;
   }
 
   @UseGuards(JwtAuthGuard)
