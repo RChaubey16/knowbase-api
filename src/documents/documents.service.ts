@@ -83,26 +83,25 @@ export class DocumentsService {
 
     const safeLimit = Math.min(limit, 50);
 
-    return {
-      items: await this.db
-        .select({
-          id: schema.documents.id,
-          title: schema.documents.title,
-          type: schema.documents.type,
-          status: schema.documents.status,
-          createdAt: schema.documents.createdAt,
-          updatedAt: schema.documents.updatedAt,
-        })
-        .from(schema.documents)
-        .where(
-          and(
-            eq(schema.documents.workspaceId, workspaceId),
-            isNull(schema.documents.archivedAt),
-          ),
-        )
-        .orderBy(desc(schema.documents.updatedAt))
-        .limit(safeLimit),
-    };
+    return await this.db
+      .select({
+        id: schema.documents.id,
+        title: schema.documents.title,
+        type: schema.documents.type,
+        source: schema.documents.source,
+        status: schema.documents.status,
+        createdAt: schema.documents.createdAt,
+        updatedAt: schema.documents.updatedAt,
+      })
+      .from(schema.documents)
+      .where(
+        and(
+          eq(schema.documents.workspaceId, workspaceId),
+          isNull(schema.documents.archivedAt),
+        ),
+      )
+      .orderBy(desc(schema.documents.updatedAt))
+      .limit(safeLimit);
   }
 
   /**
@@ -130,6 +129,7 @@ export class DocumentsService {
         id: schema.documents.id,
         title: schema.documents.title,
         type: schema.documents.type,
+        source: schema.documents.source,
         status: schema.documents.status,
         createdAt: schema.documents.createdAt,
         updatedAt: schema.documents.updatedAt,

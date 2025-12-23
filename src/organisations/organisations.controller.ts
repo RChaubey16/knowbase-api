@@ -25,4 +25,13 @@ export class OrganisationsController {
   async listMyOrganisations(@Req() req: RequestWithJwtUser) {
     return this.organisationsService.listUserOrganisations(req.user.userId);
   }
+
+  @Get("/:slug")
+  async getOrganisationBySlug(@Req() req: RequestWithJwtUser) {
+    const result = await this.organisationsService.getOrganisationBySlug(
+      req.params.slug,
+    );
+    console.log(result);
+    return result;
+  }
 }

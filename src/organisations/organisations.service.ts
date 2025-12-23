@@ -32,7 +32,7 @@ export class OrganisationsService {
         ),
       );
 
-    if (ownedOrgs.length >= 1) {
+    if (ownedOrgs.length >= 2) {
       throw new ForbiddenException("Free tier allows only one organisation");
     }
 
@@ -74,6 +74,20 @@ export class OrganisationsService {
         eq(organisationMembers.organisationId, organisations.id),
       )
       .where(eq(organisationMembers.userId, userId));
+  }
+
+  /**
+   * Gets an organisation by slug
+   * @param slug The slug of the organisation
+   * @returns The organisation
+   */
+  async getOrganisationBySlug(slug: string) {
+    const org = await this.db
+      .select()
+      .from(organisations)
+      .where(eq(organisations.slug, slug));
+
+    return org;
   }
 
   /**
