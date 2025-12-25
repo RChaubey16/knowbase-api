@@ -1,10 +1,17 @@
-import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+} from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { eq, and } from "drizzle-orm";
 
 import * as schema from "../db/schema";
 import { organisations } from "../db/schema/organisations";
 import { organisationMembers } from "../db/schema/organisation-members";
+import { PostgresError } from "postgres";
+import { DrizzleQueryError } from "drizzle-orm";
 
 @Injectable()
 export class OrganisationsService {
@@ -21,7 +28,7 @@ export class OrganisationsService {
    * @returns The created organisation
    */
   async createOrganisation(userId: string, name: string, slug: string) {
-    // 🔒 Free-tier rule: user can own only ONE organisation
+    // Free-tier rule
     const ownedOrgs = await this.db
       .select()
       .from(organisationMembers)
@@ -32,27 +39,38 @@ export class OrganisationsService {
         ),
       );
 
-    if (ownedOrgs.length >= 2) {
+    if (ownedOrgs.length >= 3) {
       throw new ForbiddenException("Free tier allows only one organisation");
     }
 
-    const [org] = await this.db
-      .insert(organisations)
-      .values({
-        name,
-        slug,
-        createdBy: userId,
-      })
-      .returning();
+    try {
+      const [org] = await this.db
+        .insert(organisations)
+        .values({
+          name,
+          slug,
+          createdBy: userId,
+        })
+        .returning();
 
-    // Creator becomes OWNER
-    await this.db.insert(organisationMembers).values({
-      organisationId: org.id,
-      userId,
-      role: "owner",
-    });
+      await this.db.insert(organisationMembers).values({
+        organisationId: org.id,
+        userId,
+        role: "owner",
+      });
 
-    return org;
+      return org;
+    } catch (err) {
+      if (
+        err instanceof DrizzleQueryError &&
+        err.cause instanceof PostgresError &&
+        err.cause.code === "23505"
+      ) {
+        throw new BadRequestException("Slug is already taken");
+      }
+
+      throw err;
+    }
   }
 
   /**
