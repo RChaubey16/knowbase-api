@@ -97,6 +97,20 @@ export class WorkspacesService {
   }
 
   /**
+   * Gets an workspace by slug
+   * @param slug The slug of the workspace
+   * @returns The workspace
+   */
+  async getWorkspaceBySlug(slug: string) {
+    const workspace = await this.db
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.slug, slug));
+
+    return workspace;
+  }
+
+  /**
    * Deletes a workspace for a user in an organisation
    * @param userId The ID of the user
    * @param organisationId The ID of the organisation

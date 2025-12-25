@@ -37,6 +37,14 @@ export class WorkspacesController {
     );
   }
 
+  @Get("/:slug")
+  async getWorkspaceBySlug(@Req() req: RequestWithJwtAndOrg) {
+    const result = await this.workspacesService.getWorkspaceBySlug(
+      req.params.slug,
+    );
+    return result;
+  }
+
   @Delete(":id")
   delete(@Req() req: RequestWithJwtAndOrg, @Param("id") workspaceId: string) {
     return this.workspacesService.deleteWorkspace(

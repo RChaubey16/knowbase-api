@@ -87,6 +87,7 @@ export class DocumentsService {
       .select({
         id: schema.documents.id,
         title: schema.documents.title,
+        content: schema.documentContents.rawContent,
         type: schema.documents.type,
         source: schema.documents.source,
         status: schema.documents.status,
@@ -94,6 +95,10 @@ export class DocumentsService {
         updatedAt: schema.documents.updatedAt,
       })
       .from(schema.documents)
+      .innerJoin(
+        schema.documentContents,
+        eq(schema.documents.id, schema.documentContents.documentId),
+      )
       .where(
         and(
           eq(schema.documents.workspaceId, workspaceId),
