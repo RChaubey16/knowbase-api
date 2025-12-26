@@ -18,19 +18,19 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
 import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
 
-@Controller("workspaces/:workspaceId/documents")
+@Controller("workspaces/:workspace/documents")
 @UseGuards(JwtAuthGuard, OrganisationContextGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Get()
   listDocuments(
-    @Param("workspaceId") workspaceId: string,
+    @Param("workspace") workspace: string,
     @Query("limit") limit: string,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     return this.documentsService.listDocuments(
-      workspaceId,
+      workspace,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
       Number(limit) || 20,
@@ -39,12 +39,12 @@ export class DocumentsController {
 
   @Get(":documentId")
   getDocumentById(
-    @Param("workspaceId") workspaceId: string,
+    @Param("workspace") workspace: string,
     @Param("documentId") documentId: string,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     return this.documentsService.getDocumentById(
-      workspaceId,
+      workspace,
       documentId,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
@@ -53,12 +53,12 @@ export class DocumentsController {
 
   @Post()
   createDocument(
-    @Param("workspaceId") workspaceId: string,
+    @Param("workspace") workspace: string,
     @Body() dto: CreateDocumentDto,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     return this.documentsService.createDocument(
-      workspaceId,
+      workspace,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
       dto,
@@ -67,13 +67,13 @@ export class DocumentsController {
 
   @Put(":documentId")
   updateDocument(
-    @Param("workspaceId") workspaceId: string,
+    @Param("workspace") workspace: string,
     @Param("documentId") documentId: string,
     @Body() dto: UpdateDocumentDto,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     return this.documentsService.updateDocument(
-      workspaceId,
+      workspace,
       documentId,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
@@ -84,12 +84,12 @@ export class DocumentsController {
   @Delete(":documentId")
   @HttpCode(204)
   async archiveDocument(
-    @Param("workspaceId") workspaceId: string,
+    @Param("workspace") workspace: string,
     @Param("documentId") documentId: string,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     await this.documentsService.archiveDocument(
-      workspaceId,
+      workspace,
       documentId,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,

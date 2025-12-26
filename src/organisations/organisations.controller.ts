@@ -31,7 +31,6 @@ export class OrganisationsController {
     const result = await this.organisationsService.getOrganisationBySlug(
       req.params.slug,
     );
-    console.log(result);
     return result;
   }
 }

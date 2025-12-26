@@ -26,13 +26,13 @@ export class DocumentsService {
    * @returns The created document
    */
   async createDocument(
-    workspaceId: string,
+    workspaceIdentifier: string,
     organisationId: string,
     organisationMemberId: string,
     dto: CreateDocumentDto,
   ) {
-    await this.assertWorkspaceAccess(
-      workspaceId,
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
       organisationId,
       organisationMemberId,
     );
@@ -70,13 +70,13 @@ export class DocumentsService {
    * @returns An array of documents
    */
   async listDocuments(
-    workspaceId: string,
+    workspaceIdentifier: string,
     organisationId: string,
     organisationMemberId: string,
     limit: number,
   ) {
-    await this.assertWorkspaceAccess(
-      workspaceId,
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
       organisationId,
       organisationMemberId,
     );
@@ -118,13 +118,13 @@ export class DocumentsService {
    * @returns The document
    */
   async getDocumentById(
-    workspaceId: string,
+    workspaceIdentifier: string,
     documentId: string,
     organisationId: string,
     organisationMemberId: string,
   ) {
-    await this.assertWorkspaceAccess(
-      workspaceId,
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
       organisationId,
       organisationMemberId,
     );
@@ -171,14 +171,14 @@ export class DocumentsService {
    * @returns The updated document
    */
   async updateDocument(
-    workspaceId: string,
+    workspaceIdentifier: string,
     documentId: string,
     organisationId: string,
     organisationMemberId: string,
     dto: UpdateDocumentDto,
   ) {
-    await this.assertWorkspaceAccess(
-      workspaceId,
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
       organisationId,
       organisationMemberId,
     );
@@ -225,13 +225,13 @@ export class DocumentsService {
    * @param organisationMemberId The ID of the organisation member
    */
   async archiveDocument(
-    workspaceId: string,
+    workspaceIdentifier: string,
     documentId: string,
     organisationId: string,
     organisationMemberId: string,
   ) {
-    await this.assertWorkspaceAccess(
-      workspaceId,
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
       organisationId,
       organisationMemberId,
     );
@@ -257,12 +257,19 @@ export class DocumentsService {
    * Workspace access via organisation membership
    */
   private async assertWorkspaceAccess(
-    workspaceId: string,
+    workspaceIdentifier: string,
     organisationId: string,
     organisationMemberId: string,
-  ) {
+  ): Promise<string> {
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        workspaceIdentifier,
+      );
+
     const [member] = await this.db
-      .select()
+      .select({
+        id: schema.workspaces.id,
+      })
       .from(schema.workspaceMembers)
       .innerJoin(
         schema.workspaces,
@@ -270,7 +277,9 @@ export class DocumentsService {
       )
       .where(
         and(
-          eq(schema.workspaceMembers.workspaceId, workspaceId),
+          isUuid
+            ? eq(schema.workspaces.id, workspaceIdentifier)
+            : eq(schema.workspaces.slug, workspaceIdentifier),
           eq(
             schema.workspaceMembers.organisationMemberId,
             organisationMemberId,
@@ -283,5 +292,7 @@ export class DocumentsService {
     if (!member) {
       throw new ForbiddenException("You do not have access to this workspace");
     }
+
+    return member.id;
   }
 }
