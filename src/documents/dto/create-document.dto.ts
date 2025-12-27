@@ -9,4 +9,12 @@ export class CreateDocumentDto {
   @IsString()
   @IsNotEmpty()
   content: string;
+
+  @IsString()
+  @IsNotEmpty()
+  type: "text" | "url" | "pdf";
+
+  @IsString()
+  @IsNotEmpty()
+  source: string;
 }

@@ -44,9 +44,9 @@ export class DocumentsService {
           workspaceId,
           createdByMemberId: organisationMemberId,
           title: dto.title.trim(),
-          type: "text",
+          type: dto.type ?? "text",
           status: "ready",
-          source: "manual",
+          source: dto.source ?? "manual",
         })
         .returning();
 
