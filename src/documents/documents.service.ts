@@ -5,7 +5,7 @@ import {
   Inject,
 } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { and, eq, isNull, desc } from "drizzle-orm";
+import { and, eq, isNull, desc, sql } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
@@ -251,6 +251,42 @@ export class DocumentsService {
     if (!result.length) {
       throw new NotFoundException("Document not found");
     }
+  }
+
+  async search(
+    query: string,
+    workspaceIdentifier: string,
+    organisationId: string,
+    organisationMemberId: string,
+    limit: number = 20,
+  ) {
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
+      organisationId,
+      organisationMemberId,
+    );
+
+    return this.db.execute(sql`
+   SELECT
+      d.id,
+      d.title,
+      d.type,
+      d.status,
+      dc.raw_content AS snippet,
+      ts_rank(
+        d.search_vector || dc.search_vector,
+        plainto_tsquery('english', ${query})
+      ) AS rank
+    FROM documents d
+    JOIN document_contents dc ON dc.document_id = d.id
+    WHERE
+      d.workspace_id = ${workspaceId}
+      AND d.archived_at IS NULL
+      AND (d.search_vector || dc.search_vector)
+          @@ plainto_tsquery('english', ${query})
+    ORDER BY rank DESC
+    LIMIT ${limit};
+  `);
   }
 
   /**

@@ -37,6 +37,22 @@ export class DocumentsController {
     );
   }
 
+  @Get("search")
+  search(
+    @Param("workspace") workspace: string,
+    @Query("q") query: string,
+    @Req() req: RequestWithJwtAndOrg,
+  ) {
+    if (!query?.trim()) return [];
+    console.log(`WORK`, workspace);
+    return this.documentsService.search(
+      query,
+      workspace,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+    );
+  }
+
   @Get(":documentId")
   getDocumentById(
     @Param("workspace") workspace: string,
