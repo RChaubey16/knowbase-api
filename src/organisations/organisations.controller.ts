@@ -49,4 +49,15 @@ export class OrganisationsController {
       dto,
     );
   }
+
+  /**
+   * GET /organisations/me
+   */
+  @Get("/:slug/me")
+  getUserOrgDetails(@Req() req: RequestWithJwtAndOrg) {
+    return this.organisationsService.getUserOrgDetails(
+      req.user.userId,
+      req.params.slug,
+    );
+  }
 }

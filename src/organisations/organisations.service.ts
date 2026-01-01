@@ -133,6 +133,41 @@ export class OrganisationsService {
   }
 
   /**
+   * Gets the details of an organisation for a user
+   * @param userId The ID of the user
+   * @param organisationSlug The slug of the organisation
+   * @returns The organisation details
+   */
+  async getUserOrgDetails(userId: string, organisationSlug: string) {
+    const organisation = await this.organisationResolver.resolve(
+      "",
+      organisationSlug,
+    );
+
+    if (!organisation) {
+      throw new ForbiddenException("Organisation not found");
+    }
+
+    const { id } = organisation;
+
+    const [member] = await this.db
+      .select()
+      .from(organisationMembers)
+      .innerJoin(
+        organisations,
+        eq(organisationMembers.organisationId, organisations.id),
+      )
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(organisationMembers.organisationId, id),
+        ),
+      );
+
+    return member;
+  }
+
+  /**
    * Adds members to an organisation
    * @param userId The ID of the user adding the members
    * @param dto The DTO containing the organisation ID, organisation slug, and emails

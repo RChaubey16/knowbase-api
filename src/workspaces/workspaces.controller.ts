@@ -77,4 +77,17 @@ export class WorkspacesController {
   ) {
     return this.workspacesService.addViewers(req.user.userId, dto);
   }
+
+  /**
+   * GET /workspaces/:slug/me
+   */
+  @Get("/:slug/me")
+  getUserWorkspaceDetails(@Req() req: RequestWithJwtAndOrg) {
+    const { organisationMemberId } = req.organisation;
+
+    return this.workspacesService.getUserWorkspaceDetails(
+      organisationMemberId,
+      req.params.slug,
+    );
+  }
 }

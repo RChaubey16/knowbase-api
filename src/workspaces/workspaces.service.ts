@@ -108,12 +108,39 @@ export class WorkspacesService {
    * @returns The workspace
    */
   async getWorkspaceBySlug(slug: string) {
-    const workspace = await this.db
+    const [workspace] = await this.db
       .select()
       .from(workspaces)
       .where(eq(workspaces.slug, slug));
 
     return workspace;
+  }
+
+  /**
+   * Gets the details of an organisation for a user
+   * @param orgMemberId The Organisation member ID of the user
+   * @param workspaceSlug The slug of the workspace
+   * @returns The workspace details
+   */
+  async getUserWorkspaceDetails(orgMemberId: string, workspaceSlug: string) {
+    const workspace = await this.getWorkspaceBySlug(workspaceSlug);
+
+    if (!workspace) {
+      throw new ForbiddenException("Workspace not found");
+    }
+
+    const [member] = await this.db
+      .select()
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+      .where(
+        and(
+          eq(workspaceMembers.organisationMemberId, orgMemberId),
+          eq(workspaceMembers.workspaceId, workspace.id),
+        ),
+      );
+
+    return member;
   }
 
   /**
@@ -157,6 +184,12 @@ export class WorkspacesService {
     return { success: true };
   }
 
+  /**
+   * Adds members to a workspace
+   * @param userId The ID of the user adding the members
+   * @param dto The DTO containing the workspace ID, workspace slug, and emails
+   * @returns The added members
+   */
   async addViewers(userId: string, dto: AddWorkspaceMembersDto) {
     const {
       organisationId,
