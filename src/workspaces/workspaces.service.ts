@@ -1,16 +1,22 @@
 import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "../db/schema";
 import { workspaces } from "../db/schema/workspaces";
 import { workspaceMembers } from "../db/schema/workspace-members";
 import { organisationMembers } from "../db/schema/organisation-members";
+import { users } from "../db/schema/users";
 import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
+import { AddWorkspaceMembersDto } from "./dto/add-workspace-members.dto";
+import { OrganisationResolverService } from "src/organisations/organisation-resolver.service";
 
 @Injectable()
 export class WorkspacesService {
-  constructor(@Inject("DB") private db: PostgresJsDatabase<typeof schema>) {}
+  constructor(
+    @Inject("DB") private db: PostgresJsDatabase<typeof schema>,
+    private readonly organisationResolver: OrganisationResolverService,
+  ) {}
 
   /**
    * Lists all workspaces for a user in an organisation
@@ -149,5 +155,107 @@ export class WorkspacesService {
     await this.db.delete(workspaces).where(eq(workspaces.id, workspaceId));
 
     return { success: true };
+  }
+
+  async addViewers(userId: string, dto: AddWorkspaceMembersDto) {
+    const {
+      organisationId,
+      organisationSlug,
+      workspaceId,
+      workspaceSlug,
+      emails,
+    } = dto;
+
+    if (!workspaceId && !workspaceSlug) {
+      throw new ForbiddenException("Workspace id or slug is required");
+    }
+
+    return this.db.transaction(async (tx) => {
+      /**
+       * 1️⃣ Resolve organisation
+       */
+      const organisation = await this.organisationResolver.resolve(
+        organisationId,
+        organisationSlug,
+      );
+
+      /**
+       * 2️⃣ Resolve workspace
+       */
+      const [workspace] = await tx
+        .select()
+        .from(workspaces)
+        .where(
+          and(
+            eq(workspaces.organisationId, organisation.id),
+            workspaceId
+              ? eq(workspaces.id, workspaceId)
+              : eq(workspaces.slug, workspaceSlug!),
+          ),
+        );
+
+      if (!workspace) {
+        throw new ForbiddenException("Workspace not found");
+      }
+
+      /**
+       * 3️⃣ Owner check
+       */
+      const [owner] = await tx
+        .select({ id: workspaceMembers.id })
+        .from(workspaceMembers)
+        .innerJoin(
+          organisationMembers,
+          eq(workspaceMembers.organisationMemberId, organisationMembers.id),
+        )
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, workspace.id),
+            eq(workspaceMembers.role, "owner"),
+            eq(organisationMembers.userId, userId),
+          ),
+        );
+
+      if (!owner) {
+        throw new ForbiddenException("Only workspace owners can add members");
+      }
+
+      /**
+       * 4️⃣ Fetch org members matching emails (single query)
+       */
+      const membersToAdd = await tx
+        .select({ id: organisationMembers.id })
+        .from(organisationMembers)
+        .innerJoin(users, eq(organisationMembers.userId, users.id))
+        .where(
+          and(
+            eq(organisationMembers.organisationId, organisation.id),
+            inArray(users.email, emails),
+          ),
+        );
+
+      if (!membersToAdd.length) {
+        return { added: 0 };
+      }
+
+      /**
+       * 5️⃣ Bulk insert — DB enforces uniqueness
+       */
+      await tx
+        .insert(workspaceMembers)
+        .values(
+          membersToAdd.map((m) => ({
+            workspaceId: workspace.id,
+            organisationMemberId: m.id,
+            role: "viewer" as const,
+          })),
+        )
+        .onConflictDoNothing();
+
+      return {
+        workspaceId: workspace.id,
+        added: membersToAdd.length,
+      };
+    });
   }
 }
