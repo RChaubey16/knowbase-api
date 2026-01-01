@@ -3,6 +3,8 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationsService } from "./organisations.service";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 import { CreateOrganisationDto } from "./dto/create-organisation.dto";
+import type { RequestWithJwtAndOrg } from "./interfaces/request-with-org.interface";
+import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 
 @Controller("organisations")
 @UseGuards(JwtAuthGuard)
@@ -32,5 +34,19 @@ export class OrganisationsController {
       req.params.slug,
     );
     return result;
+  }
+
+  /**
+   * POST /organisations/members
+   */
+  @Post("members")
+  addOrgMembers(
+    @Req() req: RequestWithJwtAndOrg,
+    @Body() dto: AddOrganisationMembersDto,
+  ) {
+    return this.organisationsService.addOrganisationMembers(
+      req.user.userId,
+      dto,
+    );
   }
 }

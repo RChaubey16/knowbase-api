@@ -5,19 +5,23 @@ import {
   Injectable,
 } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 import * as schema from "../db/schema";
+import { users } from "../db/schema";
 import { organisations } from "../db/schema/organisations";
 import { organisationMembers } from "../db/schema/organisation-members";
 import { PostgresError } from "postgres";
 import { DrizzleQueryError } from "drizzle-orm";
+import { OrganisationResolverService } from "./organisation-resolver.service";
+import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 
 @Injectable()
 export class OrganisationsService {
   constructor(
     @Inject("DB")
     private db: PostgresJsDatabase<typeof schema>,
+    private readonly organisationResolver: OrganisationResolverService,
   ) {}
 
   /**
@@ -126,5 +130,92 @@ export class OrganisationsService {
       );
 
     return !!member;
+  }
+
+  /**
+   * Adds members to an organisation
+   * @param userId The ID of the user adding the members
+   * @param dto The DTO containing the organisation ID, organisation slug, and emails
+   * @returns The added members
+   */
+  async addOrganisationMembers(userId: string, dto: AddOrganisationMembersDto) {
+    const { organisationId, organisationSlug, emails } = dto;
+
+    return this.db.transaction(async (tx) => {
+      /**
+       * 1️⃣ Resolve organisation
+       */
+      const organisation = await this.organisationResolver.resolve(
+        organisationId,
+        organisationSlug,
+      );
+
+      /**
+       * 2️⃣ Owner / admin check (org-level authority)
+       */
+      const [admin] = await tx
+        .select({ id: organisationMembers.id })
+        .from(organisationMembers)
+        .where(
+          and(
+            eq(organisationMembers.organisationId, organisation.id),
+            eq(organisationMembers.userId, userId),
+            inArray(organisationMembers.role, ["owner", "admin"]),
+          ),
+        );
+
+      if (!admin) {
+        throw new ForbiddenException(
+          "Only organisation owners or admins can invite members",
+        );
+      }
+
+      /**
+       * 3️⃣ Resolve existing users by email
+       */
+      const existingUsers = await tx
+        .select({
+          userId: users.id,
+          email: users.email,
+        })
+        .from(users)
+        .where(inArray(users.email, emails));
+
+      if (!existingUsers.length) {
+        return {
+          organisationId: organisation.id,
+          added: 0,
+          skipped: emails,
+        };
+      }
+
+      /**
+       * 4️⃣ Insert organisation members as viewers
+       *     DB uniqueness prevents duplicates
+       */
+      const inserted = await tx
+        .insert(organisationMembers)
+        .values(
+          existingUsers.map((u) => ({
+            organisationId: organisation.id,
+            userId: u.userId,
+            role: "member" as const, // viewer-equivalent at org level
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: organisationMembers.id });
+
+      /**
+       * 5️⃣ Compute skipped emails
+       */
+      const foundEmails = new Set(existingUsers.map((u) => u.email));
+      const skippedEmails = emails.filter((e) => !foundEmails.has(e));
+
+      return {
+        organisationId: organisation.id,
+        added: inserted.length,
+        skipped: skippedEmails,
+      };
+    });
   }
 }

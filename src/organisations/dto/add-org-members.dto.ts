@@ -8,7 +8,7 @@ import {
 } from "class-validator";
 import { workspaceRoleEnum } from "src/db/schema";
 
-export class AddWorkspaceMembersDto {
+export class AddOrganisationMembersDto {
   // Organisation identifier
   @IsOptional()
   @IsString()
@@ -17,15 +17,6 @@ export class AddWorkspaceMembersDto {
   @IsOptional()
   @IsString()
   organisationSlug?: string;
-
-  // Workspace identifier
-  @IsOptional()
-  @IsString()
-  workspaceId?: string;
-
-  @IsOptional()
-  @IsString()
-  workspaceSlug?: string;
 
   // Emails to add
   @IsArray()

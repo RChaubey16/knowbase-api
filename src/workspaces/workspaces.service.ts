@@ -221,10 +221,13 @@ export class WorkspacesService {
       }
 
       /**
-       * 4️⃣ Fetch org members matching emails (single query)
+       * 4️⃣ Fetch org members that match emails (existing users only)
        */
-      const membersToAdd = await tx
-        .select({ id: organisationMembers.id })
+      const orgMembers = await tx
+        .select({
+          organisationMemberId: organisationMembers.id,
+          email: users.email,
+        })
         .from(organisationMembers)
         .innerJoin(users, eq(organisationMembers.userId, users.id))
         .where(
@@ -234,27 +237,39 @@ export class WorkspacesService {
           ),
         );
 
-      if (!membersToAdd.length) {
-        return { added: 0 };
+      if (!orgMembers.length) {
+        return {
+          workspaceId: workspace.id,
+          added: 0,
+          skipped: emails,
+        };
       }
 
       /**
-       * 5️⃣ Bulk insert — DB enforces uniqueness
+       * 5️⃣ Insert viewers (DB handles duplicates)
        */
-      await tx
+      const inserted = await tx
         .insert(workspaceMembers)
         .values(
-          membersToAdd.map((m) => ({
+          orgMembers.map((m) => ({
             workspaceId: workspace.id,
-            organisationMemberId: m.id,
+            organisationMemberId: m.organisationMemberId,
             role: "viewer" as const,
           })),
         )
-        .onConflictDoNothing();
+        .onConflictDoNothing()
+        .returning({ id: workspaceMembers.id });
+
+      /**
+       * 6️⃣ Compute skipped emails
+       */
+      const foundEmails = new Set(orgMembers.map((m) => m.email));
+      const skippedEmails = emails.filter((e) => !foundEmails.has(e));
 
       return {
         workspaceId: workspace.id,
-        added: membersToAdd.length,
+        added: inserted.length,
+        skipped: skippedEmails,
       };
     });
   }
