@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Get,
   Post,
@@ -12,11 +11,11 @@ import { JwtService } from "@nestjs/jwt";
 
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { AuthService } from "./auth.service";
-import type { RequestWithGoogleUser } from "./interfaces/request-with-google-user.interface";
-import type { RequestWithJwtUser } from "./interfaces/request-with-jwt-user.interface";
 import { JwtPayload } from "./interfaces/jwt-payload.interface";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import type { Request, Response } from "express";
+import type { RequestWithGoogleUser } from "./interfaces/request-with-google-user.interface";
+import type { RequestWithJwtUser } from "./interfaces/request-with-jwt-user.interface";
 
 @Controller("auth")
 export class AuthController {
@@ -25,12 +24,18 @@ export class AuthController {
     private jwtService: JwtService,
   ) {}
 
+  /**
+   * GET /auth/google
+   */
   @Get("google")
   @UseGuards(GoogleAuthGuard)
   googleLogin() {
     // Google redirect happens automatically
   }
 
+  /**
+   * GET /auth/google/callback
+   */
   @Get("google/callback")
   @UseGuards(GoogleAuthGuard)
   async googleCallback(
@@ -54,6 +59,9 @@ export class AuthController {
     return res.redirect(process.env.FRONT_END_URL!);
   }
 
+  /**
+   * POST /auth/refresh
+   */
   @Post("refresh")
   async refresh(@Req() req: Request, @Res() res: Response) {
     const refreshToken = (req.cookies as Record<string, string> | undefined)
@@ -87,17 +95,26 @@ export class AuthController {
     return res.send({ success: true });
   }
 
+  /**
+   * GET /auth/me
+   */
   @UseGuards(JwtAuthGuard)
   @Get("me")
   me(@Req() req: RequestWithJwtUser) {
     return req.user;
   }
 
+  /**
+   * GET /auth/debug-cookies
+   */
   @Get("debug-cookies")
   debug(@Req() req: Request) {
     return req.cookies;
   }
 
+  /**
+   * POST /auth/logout
+   */
   @UseGuards(JwtAuthGuard)
   @Post("logout")
   logout(@Req() req: RequestWithJwtUser) {

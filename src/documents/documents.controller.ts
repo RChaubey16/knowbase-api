@@ -23,6 +23,9 @@ import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
+  /**
+   * GET /workspaces/:workspace/documents
+   */
   @Get()
   listDocuments(
     @Param("workspace") workspace: string,
@@ -37,6 +40,9 @@ export class DocumentsController {
     );
   }
 
+  /**
+   * GET /workspaces/:workspace/documents/search
+   */
   @Get("search")
   search(
     @Param("workspace") workspace: string,
@@ -53,6 +59,9 @@ export class DocumentsController {
     );
   }
 
+  /**
+   * GET /workspaces/:workspace/documents/:documentId
+   */
   @Get(":documentId")
   getDocumentById(
     @Param("workspace") workspace: string,
@@ -67,6 +76,9 @@ export class DocumentsController {
     );
   }
 
+  /**
+   * POST /workspaces/:workspace/documents
+   */
   @Post()
   createDocument(
     @Param("workspace") workspace: string,
@@ -81,6 +93,9 @@ export class DocumentsController {
     );
   }
 
+  /**
+   * PUT /workspaces/:workspace/documents/:documentId
+   */
   @Put(":documentId")
   updateDocument(
     @Param("workspace") workspace: string,
@@ -97,6 +112,9 @@ export class DocumentsController {
     );
   }
 
+  /**
+   * DELETE /workspaces/:slug/:documentId
+   */
   @Delete(":documentId")
   @HttpCode(204)
   async archiveDocument(

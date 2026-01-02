@@ -11,6 +11,9 @@ import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 export class OrganisationsController {
   constructor(private readonly organisationsService: OrganisationsService) {}
 
+  /**
+   * POST /organisations
+   */
   @Post()
   async createOrganisation(
     @Req() req: RequestWithJwtUser,
@@ -28,6 +31,9 @@ export class OrganisationsController {
     return this.organisationsService.listUserOrganisations(req.user.userId);
   }
 
+  /**
+   * GET /organisations/:slug
+   */
   @Get("/:slug")
   async getOrganisationBySlug(@Req() req: RequestWithJwtUser) {
     const result = await this.organisationsService.getOrganisationBySlug(
