@@ -50,6 +50,7 @@ export class AuthController {
       // secure: process.env.NODE_ENV === "production",
       secure: true,
       sameSite: "none" as const, // "lax" for local
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     };
 
     // Option A (recommended): httpOnly cookies
