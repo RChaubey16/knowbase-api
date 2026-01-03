@@ -49,7 +49,7 @@ export class AuthController {
       httpOnly: true,
       // secure: process.env.NODE_ENV === "production",
       secure: true,
-      sameSite: "none" as const,
+      sameSite: "none" as const, // "lax" for local
     };
 
     // Option A (recommended): httpOnly cookies
