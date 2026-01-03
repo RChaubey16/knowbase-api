@@ -56,11 +56,15 @@ export class AuthController {
       path: "/",
     };
 
-    // Option A (recommended): httpOnly cookies
-    res.cookie("accessToken", accessToken, cookieOptions);
+    console.log("Setting cookies with options:", cookieOptions);
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("Redirecting to:", process.env.FRONT_END_URL);
 
+    // Set cookies
+    res.cookie("accessToken", accessToken, cookieOptions);
     res.cookie("refreshToken", refreshToken, cookieOptions);
 
+    // Redirect to frontend
     return res.redirect(process.env.FRONT_END_URL!);
   }
 
@@ -118,7 +122,22 @@ export class AuthController {
    */
   @Get("debug-cookies")
   debug(@Req() req: Request) {
-    return req.cookies;
+    return {
+      cookies: req.cookies,
+      headers: req.headers,
+      nodeEnv: process.env.NODE_ENV,
+      frontEndUrl: process.env.FRONT_END_URL,
+      cookieConfig: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite:
+          process.env.NODE_ENV === "production"
+            ? ("none" as const)
+            : ("lax" as const),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/",
+      },
+    };
   }
 
   /**
