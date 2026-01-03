@@ -21,7 +21,7 @@ import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-
 @Controller("workspaces/:workspace/documents")
 @UseGuards(JwtAuthGuard, OrganisationContextGuard)
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) {}
+  constructor(private readonly documentsService: DocumentsService) { }
 
   /**
    * GET /workspaces/:workspace/documents
@@ -50,7 +50,6 @@ export class DocumentsController {
     @Req() req: RequestWithJwtAndOrg,
   ) {
     if (!query?.trim()) return [];
-    console.log(`WORK`, workspace);
     return this.documentsService.search(
       query,
       workspace,
