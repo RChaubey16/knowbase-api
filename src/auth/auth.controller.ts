@@ -22,7 +22,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * GET /auth/google
@@ -47,8 +47,9 @@ export class AuthController {
 
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
+      // secure: process.env.NODE_ENV === "production",
+      secure: true,
+      sameSite: "none" as const,
     };
 
     // Option A (recommended): httpOnly cookies
