@@ -11,9 +11,10 @@ export const documents = pgTable("documents", {
     .notNull()
     .references(() => workspaces.id, { onDelete: "cascade" }),
 
-  createdByMemberId: uuid("created_by_member_id")
-    .notNull()
-    .references(() => organisationMembers.id, { onDelete: "restrict" }),
+  createdByMemberId: uuid("created_by_member_id").references(
+    () => organisationMembers.id,
+    { onDelete: "set null" },
+  ),
 
   title: text("title").notNull(),
   type: documentTypeEnum("type").notNull().default("text"),

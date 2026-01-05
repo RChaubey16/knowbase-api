@@ -67,10 +67,14 @@ export class OrganisationsService {
     } catch (err) {
       if (
         err instanceof DrizzleQueryError &&
-        err.cause instanceof PostgresError &&
-        err.cause.code === "23505"
+        err.cause instanceof PostgresError
       ) {
-        throw new BadRequestException("Slug is already taken");
+        if (
+          err.cause.code === "23505" &&
+          err.cause.constraint_name === "organisations_slug_unique"
+        ) {
+          throw new BadRequestException("Slug already exists");
+        }
       }
 
       throw err;
@@ -252,5 +256,41 @@ export class OrganisationsService {
         skipped: skippedEmails,
       };
     });
+  }
+
+  /**
+   * Deletes an organisation
+   * @param userId The ID of the user deleting the organisation
+   * @param organisationId The ID of the organisation
+   * @returns The deleted organisation
+   */
+  async deleteOrganisation(userId: string, organisationId: string) {
+    // Must be organisation owner
+    const [member] = await this.db
+      .select()
+      .from(organisationMembers)
+      .innerJoin(
+        organisations,
+        eq(organisationMembers.organisationId, organisations.id),
+      )
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(organisationMembers.role, "owner"),
+          eq(organisationMembers.organisationId, organisationId),
+        ),
+      );
+
+    if (!member) {
+      throw new ForbiddenException(
+        "Organisation not found or insufficient permissions",
+      );
+    }
+
+    await this.db
+      .delete(organisations)
+      .where(eq(organisations.id, organisationId));
+
+    return { success: true };
   }
 }

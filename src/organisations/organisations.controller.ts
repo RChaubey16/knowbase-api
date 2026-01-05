@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationsService } from "./organisations.service";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
@@ -54,6 +63,14 @@ export class OrganisationsController {
       req.user.userId,
       dto,
     );
+  }
+
+  /**
+   * DELETE /organisations/:id
+   */
+  @Delete(":id")
+  delete(@Req() req: RequestWithJwtAndOrg, @Param("id") id: string) {
+    return this.organisationsService.deleteOrganisation(req.user.userId, id);
   }
 
   /**

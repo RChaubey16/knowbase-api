@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ALTER COLUMN "created_by_member_id" DROP NOT NULL;
