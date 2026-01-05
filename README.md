@@ -2,6 +2,9 @@
 
 A powerful, clean, and efficient knowledge base API built with **NestJS**, **Drizzle ORM**, and **PostgreSQL**.
 
+> [!WARNING]
+> **This project is currently under active development.** Features and APIs may change without notice.
+
 ## 🚀 Features
 
 - **🔐 Robust Authentication**: Secure access via Google OAuth2 and JWT-based authentication.
