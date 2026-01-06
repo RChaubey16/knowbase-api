@@ -9,12 +9,14 @@ import { and, eq, isNull, desc, sql } from "drizzle-orm";
 import * as schema from "../db/schema";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
+import { RagService } from "src/rag/rag.service";
 
 @Injectable()
 export class DocumentsService {
   constructor(
     @Inject("DB")
     private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly ragService: RagService,
   ) {}
 
   /**
@@ -57,6 +59,11 @@ export class DocumentsService {
 
       return [doc];
     });
+
+    const isIndexed = dto.isIndexed ?? false;
+    if (isIndexed) {
+      this.ragService.indexDocument(document.id, dto.content);
+    }
 
     return document;
   }

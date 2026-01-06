@@ -11,4 +11,7 @@ export class UpdateDocumentDto {
   @IsNotEmpty()
   @MinLength(10)
   content: string;
+
+  @IsNotEmpty()
+  isIndexed: boolean;
 }

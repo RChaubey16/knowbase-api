@@ -17,4 +17,7 @@ export class CreateDocumentDto {
   @IsString()
   @IsNotEmpty()
   source: string;
+
+  @IsNotEmpty()
+  isIndexed: boolean;
 }

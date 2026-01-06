@@ -8,6 +8,7 @@ import { AuthModule } from "./auth/auth.module";
 import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { DocumentsModule } from "./documents/documents.module";
 import { OrganisationsModule } from "./organisations/organisations.module";
+import { RagModule } from "./rag/rag.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { OrganisationsModule } from "./organisations/organisations.module";
     WorkspacesModule,
     DocumentsModule,
     OrganisationsModule,
+    RagModule,
   ],
   controllers: [AppController],
   providers: [AppService],
