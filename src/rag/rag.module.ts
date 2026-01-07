@@ -3,6 +3,7 @@ import { RagService } from "./rag.service";
 import { BullModule } from "@nestjs/bullmq";
 import { RagController } from "./rag.controller";
 import { IngestionProcessor } from "./ingestion/ingestion.processor";
+import { ChunkingService } from "./chunking/chunking.service";
 
 @Module({
   imports: [
@@ -11,7 +12,7 @@ import { IngestionProcessor } from "./ingestion/ingestion.processor";
     }),
   ],
   controllers: [RagController],
-  providers: [RagService, IngestionProcessor],
+  providers: [RagService, ChunkingService, IngestionProcessor],
   exports: [RagService],
 })
 export class RagModule {}

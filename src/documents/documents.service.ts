@@ -62,7 +62,7 @@ export class DocumentsService {
 
     const isIndexed = dto.isIndexed ?? false;
     if (isIndexed) {
-      this.ragService.indexDocument(document.id, dto.content);
+      await this.ragService.indexDocument(document.id, dto.content);
     }
 
     return document;
