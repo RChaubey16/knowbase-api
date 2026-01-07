@@ -9,9 +9,22 @@ import { WorkspacesModule } from "./workspaces/workspaces.module";
 import { DocumentsModule } from "./documents/documents.module";
 import { OrganisationsModule } from "./organisations/organisations.module";
 import { RagModule } from "./rag/rag.module";
+import { BullModule } from "@nestjs/bullmq";
 
 @Module({
   imports: [
+    BullModule.forRoot({
+      connection: {
+        host: "localhost",
+        port: 6379, // TODO: move to env
+      },
+      defaultJobOptions: {
+        attempts: 3,
+        removeOnComplete: 1000,
+        removeOnFail: 3000,
+        backoff: 2000,
+      },
+    }),
     ConfigModule.forRoot({
       isGlobal: true, // makes ConfigService available everywhere
       envFilePath: ".env",
