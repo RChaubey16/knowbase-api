@@ -21,7 +21,7 @@ import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-
 @Controller("workspaces/:workspace/documents")
 @UseGuards(JwtAuthGuard, OrganisationContextGuard)
 export class DocumentsController {
-  constructor(private readonly documentsService: DocumentsService) { }
+  constructor(private readonly documentsService: DocumentsService) {}
 
   /**
    * GET /workspaces/:workspace/documents

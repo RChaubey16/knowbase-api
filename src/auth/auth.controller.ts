@@ -22,7 +22,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * GET /auth/google

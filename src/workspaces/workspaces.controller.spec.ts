@@ -46,7 +46,7 @@ describe("WorkspacesController", () => {
       } as RequestWithJwtUser);
 
       expect(result).toEqual(mockWorkspaces);
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(service.findAllWorkspacesByUser).toHaveBeenCalledWith(userId);
     });
   });
