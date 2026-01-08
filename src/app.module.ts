@@ -10,6 +10,7 @@ import { DocumentsModule } from "./documents/documents.module";
 import { OrganisationsModule } from "./organisations/organisations.module";
 import { RagModule } from "./rag/rag.module";
 import { BullModule } from "@nestjs/bullmq";
+import { SupabaseModule } from "./supabase/supabase.module";
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { BullModule } from "@nestjs/bullmq";
     DocumentsModule,
     OrganisationsModule,
     RagModule,
+    SupabaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-import { Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post } from "@nestjs/common";
 import { RagService } from "./rag.service";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
@@ -31,6 +31,20 @@ export class RagController {
 
     return {
       message: "Document indexing job added to Queue",
+    };
+  }
+
+  @Post("query")
+  async query(
+    @Body() body: { workspaceId: string; query: string; topK?: number },
+  ) {
+    // const testBody = {
+    //   workspaceId: "c1db1c61-db6d-4cb8-9922-9a42cac278ec",
+    //   query: "What is the height of Mount Everest?",
+    //   topK: 3,
+    // };
+    return {
+      answer: await this.ragService.answerQuery(body),
     };
   }
 }

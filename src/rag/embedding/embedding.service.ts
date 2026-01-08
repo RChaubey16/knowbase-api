@@ -23,6 +23,11 @@ export class EmbeddingService {
     return embeddings;
   }
 
+  async embedQuery(query: string) {
+    const embeddings = await this.createEmbeddings([query]);
+    return embeddings;
+  }
+
   private async createEmbeddings(texts: string[]) {
     const response = await fetch("https://api.jina.ai/v1/embeddings", {
       method: "POST",
