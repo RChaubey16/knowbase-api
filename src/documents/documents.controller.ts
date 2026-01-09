@@ -47,11 +47,13 @@ export class DocumentsController {
   search(
     @Param("workspace") workspace: string,
     @Query("q") query: string,
+    @Query("mode") mode: string,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     if (!query?.trim()) return [];
     return this.documentsService.search(
       query,
+      mode ?? "simple",
       workspace,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
