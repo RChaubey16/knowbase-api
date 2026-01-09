@@ -1,11 +1,13 @@
+import { Inject } from "@nestjs/common";
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
+import { eq } from "drizzle-orm";
+import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
 import { ChunkingService } from "../chunking/chunking.service";
 import { EmbeddingService } from "../embedding/embedding.service";
-import { Inject } from "@nestjs/common";
-import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+
 import * as schema from "../../db/schema";
-import { eq } from "drizzle-orm";
 
 @Processor("rag-ingestion", {
   concurrency: 3,
@@ -26,12 +28,6 @@ export class IngestionProcessor extends WorkerHost {
         await this.ingestManualDoc(job.data);
         break;
 
-      case "ingest-web-scraping-document":
-        console.log("Staring web scraping document task");
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-
-        break;
-
       default:
         console.log(`Unknown job name: ${job.name}`);
     }
@@ -46,7 +42,6 @@ export class IngestionProcessor extends WorkerHost {
 
       // 1. Chunk the document contents
       const chunks = this.chunkingService.chunk(documentContents);
-      console.log(`CHUNKS (${chunks.length} total):`, chunks);
 
       // 2. Insert chunks into database and get their IDs
       const chunkRecords = await this.db
@@ -61,11 +56,8 @@ export class IngestionProcessor extends WorkerHost {
         )
         .returning();
 
-      console.log(`Inserted ${chunkRecords.length} chunks into database`);
-
       // 3. Generate embeddings for all chunks
       const embeddings = await this.embeddingService.embedAndStore(chunks);
-      console.log(`Generated ${embeddings.length} embeddings`);
 
       // 4. Insert embeddings into database
       await this.db.insert(schema.documentChunkEmbeddings).values(
@@ -76,22 +68,25 @@ export class IngestionProcessor extends WorkerHost {
         })),
       );
 
-      console.log(`Inserted ${embeddings.length} embeddings into database`);
-
       // 5. Update document status to ready
       await this.db
         .update(schema.documents)
-        .set({ status: "ready" })
+        .set({ status: "ready", updatedAt: new Date() })
         .where(eq(schema.documents.id, documentId));
 
       console.log(`Document ${documentId} is now ready`);
+
+      return {
+        status: true,
+        message: "Document is now ready",
+      };
     } catch (error) {
       console.error("Error in ingestManualDoc:", error);
 
       // Update document status to failed
       await this.db
         .update(schema.documents)
-        .set({ status: "failed" })
+        .set({ status: "failed", updatedAt: new Date() })
         .where(eq(schema.documents.id, data.documentId));
 
       throw error; // Re-throw so BullMQ marks job as failed

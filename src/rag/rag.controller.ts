@@ -18,17 +18,6 @@ export class RagController {
 
     await this.ragService.indexDocument(DOC_ID, DOC_CONTENT);
 
-    // await this.ragQueue.add(
-    //   "ingest-web-scraping-document",
-    //   {
-    //     documentId: "999",
-    //   },
-    //   {
-    //     attempts: 3,
-    //     backoff: { type: "exponential", delay: 2000 },
-    //   },
-    // );
-
     return {
       message: "Document indexing job added to Queue",
     };

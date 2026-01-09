@@ -39,6 +39,9 @@ export class DocumentsService {
       organisationMemberId,
     );
 
+    const isIndexed = dto.isIndexed ?? false;
+    const docStatus = isIndexed ? "processing" : "ready";
+
     const [document] = await this.db.transaction(async (tx) => {
       const [doc] = await tx
         .insert(schema.documents)
@@ -47,7 +50,7 @@ export class DocumentsService {
           createdByMemberId: organisationMemberId,
           title: dto.title.trim(),
           type: dto.type ?? "text",
-          status: "ready",
+          status: docStatus,
           source: dto.source ?? "manual",
         })
         .returning();
@@ -60,7 +63,6 @@ export class DocumentsService {
       return [doc];
     });
 
-    const isIndexed = dto.isIndexed ?? false;
     if (isIndexed) {
       await this.ragService.indexDocument(document.id, dto.content);
     }
@@ -189,6 +191,8 @@ export class DocumentsService {
       organisationId,
       organisationMemberId,
     );
+    const isIndexed = dto.isIndexed ?? false;
+    const docStatus = isIndexed ? "processing" : "ready";
 
     const updated = await this.db.transaction(async (tx) => {
       const [doc] = await tx
@@ -217,6 +221,14 @@ export class DocumentsService {
           updatedAt: new Date(),
         })
         .where(eq(schema.documentContents.documentId, documentId));
+
+      if (isIndexed) {
+        tx.update(schema.documents).set({
+          status: docStatus,
+          updatedAt: new Date(),
+        });
+        await this.ragService.indexDocument(doc.id, dto.content);
+      }
 
       return doc;
     });
