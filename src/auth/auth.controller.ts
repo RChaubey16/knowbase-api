@@ -56,10 +56,6 @@ export class AuthController {
       path: "/",
     };
 
-    console.log("Setting cookies with options:", cookieOptions);
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log("Redirecting to:", process.env.FRONT_END_URL);
-
     // Set cookies
     res.cookie("accessToken", accessToken, cookieOptions);
     res.cookie("refreshToken", refreshToken, cookieOptions);
@@ -115,29 +111,6 @@ export class AuthController {
   @Get("me")
   me(@Req() req: RequestWithJwtUser) {
     return req.user;
-  }
-
-  /**
-   * GET /auth/debug-cookies
-   */
-  @Get("debug-cookies")
-  debug(@Req() req: Request) {
-    return {
-      cookies: req.cookies,
-      headers: req.headers,
-      nodeEnv: process.env.NODE_ENV,
-      frontEndUrl: process.env.FRONT_END_URL,
-      cookieConfig: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite:
-          process.env.NODE_ENV === "production"
-            ? ("none" as const)
-            : ("lax" as const),
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: "/",
-      },
-    };
   }
 
   /**

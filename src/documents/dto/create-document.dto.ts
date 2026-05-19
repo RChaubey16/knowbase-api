@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsString, MaxLength } from "class-validator";
+import {
+  IsBoolean,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from "class-validator";
 
 export class CreateDocumentDto {
   @IsString()
@@ -10,14 +17,13 @@ export class CreateDocumentDto {
   @IsNotEmpty()
   content: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsIn(["text", "url", "pdf"])
   type: "text" | "url" | "pdf";
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  source: string;
+  source?: string;
 
-  @IsNotEmpty()
+  @IsBoolean()
   isIndexed: boolean;
 }

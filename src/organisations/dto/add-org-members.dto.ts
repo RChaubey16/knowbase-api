@@ -1,24 +1,6 @@
-import {
-  IsArray,
-  IsEmail,
-  IsOptional,
-  IsString,
-  ArrayNotEmpty,
-  IsEnum,
-} from "class-validator";
-import { workspaceRoleEnum } from "src/db/schema";
+import { IsArray, IsEmail, IsOptional, IsString, ArrayNotEmpty, IsIn } from "class-validator";
 
 export class AddOrganisationMembersDto {
-  // Organisation identifier
-  @IsOptional()
-  @IsString()
-  organisationId?: string;
-
-  @IsOptional()
-  @IsString()
-  organisationSlug?: string;
-
-  // Emails to add
   @IsArray()
   @ArrayNotEmpty()
   @IsEmail({}, { each: true })
@@ -26,6 +8,6 @@ export class AddOrganisationMembersDto {
 
   @IsOptional()
   @IsString()
-  @IsEnum(workspaceRoleEnum)
+  @IsIn(["owner", "admin", "member"])
   role?: string;
 }

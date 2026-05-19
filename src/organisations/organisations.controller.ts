@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { OrganisationContextGuard } from "./guards/organisation-context.guard";
 import { OrganisationsService } from "./organisations.service";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 import { CreateOrganisationDto } from "./dto/create-organisation.dto";
@@ -35,6 +36,9 @@ export class OrganisationsController {
     );
   }
 
+  /**
+   * GET /organisations
+   */
   @Get()
   async listMyOrganisations(@Req() req: RequestWithJwtUser) {
     return this.organisationsService.listUserOrganisations(req.user.userId);
@@ -45,22 +49,24 @@ export class OrganisationsController {
    */
   @Get("/:slug")
   async getOrganisationBySlug(@Req() req: RequestWithJwtUser) {
-    const result = await this.organisationsService.getOrganisationBySlug(
+    return this.organisationsService.getOrganisationBySlug(
       req.params.slug,
+      req.user.userId,
     );
-    return result;
   }
 
   /**
    * POST /organisations/members
    */
   @Post("members")
+  @UseGuards(OrganisationContextGuard)
   addOrgMembers(
     @Req() req: RequestWithJwtAndOrg,
     @Body() dto: AddOrganisationMembersDto,
   ) {
     return this.organisationsService.addOrganisationMembers(
-      req.user.userId,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
       dto,
     );
   }
@@ -69,15 +75,15 @@ export class OrganisationsController {
    * DELETE /organisations/:id
    */
   @Delete(":id")
-  delete(@Req() req: RequestWithJwtAndOrg, @Param("id") id: string) {
+  delete(@Req() req: RequestWithJwtUser, @Param("id") id: string) {
     return this.organisationsService.deleteOrganisation(req.user.userId, id);
   }
 
   /**
-   * GET /organisations/me
+   * GET /organisations/:slug/me
    */
   @Get("/:slug/me")
-  getUserOrgDetails(@Req() req: RequestWithJwtAndOrg) {
+  getUserOrgDetails(@Req() req: RequestWithJwtUser) {
     return this.organisationsService.getUserOrgDetails(
       req.user.userId,
       req.params.slug,

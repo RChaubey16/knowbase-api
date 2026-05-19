@@ -3,7 +3,6 @@ import {
   Controller,
   Delete,
   Get,
-  Headers,
   Param,
   Post,
   Req,
@@ -38,8 +37,8 @@ export class WorkspacesController {
   @Post()
   create(@Req() req: RequestWithJwtAndOrg, @Body() dto: CreateWorkspaceDto) {
     return this.workspacesService.create(
-      req.user.userId,
       req.organisation.organisationId,
+      req.organisation.organisationMemberId,
       dto,
     );
   }
@@ -49,10 +48,11 @@ export class WorkspacesController {
    */
   @Get("/:slug")
   async getWorkspaceBySlug(@Req() req: RequestWithJwtAndOrg) {
-    const result = await this.workspacesService.getWorkspaceBySlug(
+    return this.workspacesService.getWorkspaceBySlug(
       req.params.slug,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
     );
-    return result;
   }
 
   /**
@@ -75,7 +75,11 @@ export class WorkspacesController {
     @Req() req: RequestWithJwtAndOrg,
     @Body() dto: AddWorkspaceMembersDto,
   ) {
-    return this.workspacesService.addViewers(req.user.userId, dto);
+    return this.workspacesService.addViewers(
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+      dto,
+    );
   }
 
   /**
@@ -83,10 +87,8 @@ export class WorkspacesController {
    */
   @Get("/:slug/me")
   getUserWorkspaceDetails(@Req() req: RequestWithJwtAndOrg) {
-    const { organisationMemberId } = req.organisation;
-
     return this.workspacesService.getUserWorkspaceDetails(
-      organisationMemberId,
+      req.organisation.organisationMemberId,
       req.params.slug,
     );
   }

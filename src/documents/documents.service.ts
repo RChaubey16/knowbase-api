@@ -273,6 +273,8 @@ export class DocumentsService {
       organisationMemberId,
     );
 
+    const safeLimit = Math.min(limit, 50);
+
     return this.db.execute(sql`
    SELECT
       d.id,
@@ -292,7 +294,7 @@ export class DocumentsService {
       AND (d.search_vector || dc.search_vector)
           @@ plainto_tsquery('english', ${query})
     ORDER BY rank DESC
-    LIMIT ${limit};
+    LIMIT ${safeLimit};
   `);
   }
 
