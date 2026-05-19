@@ -5,16 +5,9 @@ import {
   GenerativeModel,
   GenerateContentResult,
 } from "@google/generative-ai";
+import { Chunk, GroundedPromptInput } from "../rag.types";
 
-export interface Chunk {
-  content: string;
-  metadata?: Record<string, unknown>;
-}
-
-export interface GroundedPromptInput {
-  query: string;
-  chunks: Chunk[];
-}
+export type { Chunk, GroundedPromptInput };
 
 @Injectable()
 export class GeminiService {
@@ -30,7 +23,7 @@ export class GeminiService {
     const genAI = new GoogleGenerativeAI(apiKey);
 
     this.model = genAI.getGenerativeModel({
-      model: "gemini-3-flash-preview",
+      model: this.configService.get<string>("GEMINI_MODEL", "gemini-2.0-flash"),
     });
   }
 

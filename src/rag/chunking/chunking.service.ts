@@ -1,9 +1,8 @@
 import { Injectable } from "@nestjs/common";
 
-// chunking.service.ts
 @Injectable()
 export class ChunkingService {
-  chunk(text: string, maxChars = 300, overlapChars = 50): string[] {
+  chunk(text: string, maxChars = 1500, overlapChars = 150): string[] {
     if (overlapChars >= maxChars) {
       throw new Error("overlapChars must be smaller than maxChars");
     }
@@ -20,7 +19,6 @@ export class ChunkingService {
       } else {
         chunks.push(current);
 
-        // Create overlap from the end of the previous chunk
         const overlap = current.slice(
           Math.max(0, current.length - overlapChars),
         );

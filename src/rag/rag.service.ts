@@ -9,7 +9,7 @@ import * as schema from "../db/schema";
 import { SupabaseService } from "src/supabase/supabase.service";
 import { GeminiService } from "./gemini/gemini.service";
 import { EmbeddingService } from "./embedding/embedding.service";
-import { Chunk } from "./gemini/gemini.service";
+import { Chunk } from "./rag.types";
 
 @Injectable()
 export class RagService {
@@ -21,14 +21,11 @@ export class RagService {
     private readonly geminiService: GeminiService,
   ) {}
 
-  /**
-   * Indexes a document
-   * @param documentId The ID of the document
-   * @param documentContents The contents of the document
-   * @returns The result of the indexing operation
-   */
-  async indexDocument(documentId: string, documentContents: string) {
-    // Check if chunks already exist for this document
+  async indexDocument(
+    documentId: string,
+    documentContents: string,
+    force = false,
+  ) {
     const existingChunks = await this.db
       .select({ id: schema.documentChunks.id })
       .from(schema.documentChunks)
@@ -36,49 +33,32 @@ export class RagService {
       .limit(1);
 
     if (existingChunks.length > 0) {
-      console.log(`Document ${documentId} is already indexed. Skipping.`);
-      return {
-        status: true,
-        message: "Document is already indexed",
-      };
+      if (!force) {
+        return { status: true, message: "Document is already indexed" };
+      }
+      // Delete stale chunks; cascade removes their embeddings
+      await this.db
+        .delete(schema.documentChunks)
+        .where(eq(schema.documentChunks.documentId, documentId));
     }
 
-    // Proceed with adding job to queue
     await this.ragQueue.add(
       "ingest-manual-document",
-      {
-        documentId,
-        documentContents,
-      },
-      {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 2000 },
-      },
+      { documentId, documentContents },
+      { attempts: 3, backoff: { type: "exponential", delay: 2000 } },
     );
 
-    console.log(`Indexing job added for document ${documentId}`);
-
-    return {
-      status: true,
-      message: "Document indexing job added to Queue",
-    };
+    return { status: true, message: "Document indexing job added to Queue" };
   }
 
-  /**
-   * Answers a query
-   * @param input The input to the query
-   * @returns The result of the query
-   */
   async answerQuery(input: {
     workspaceId: string;
     query: string;
     topK?: number;
   }) {
-    // 1. Embed query
     const queryEmbedding = await this.embeddingService.embedQuery(input.query);
     const flatEmbedding = queryEmbedding[0];
 
-    // 2. Retrieve relevant chunks
     const { data, error } = (await this.supabase
       .getClient()
       .rpc("match_document_chunks", {
@@ -89,7 +69,6 @@ export class RagService {
 
     if (error) throw error;
 
-    const answer = await this.geminiService.generate(input.query, data || []);
-    return answer;
+    return this.geminiService.generate(input.query, data || []);
   }
 }

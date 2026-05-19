@@ -199,6 +199,7 @@ export class DocumentsService {
         .update(schema.documents)
         .set({
           title: dto.title.trim(),
+          status: docStatus,
           updatedAt: new Date(),
         })
         .where(
@@ -222,16 +223,12 @@ export class DocumentsService {
         })
         .where(eq(schema.documentContents.documentId, documentId));
 
-      if (isIndexed) {
-        tx.update(schema.documents).set({
-          status: docStatus,
-          updatedAt: new Date(),
-        });
-        await this.ragService.indexDocument(doc.id, dto.content);
-      }
-
       return doc;
     });
+
+    if (isIndexed) {
+      await this.ragService.indexDocument(updated.id, dto.content, true);
+    }
 
     return updated;
   }

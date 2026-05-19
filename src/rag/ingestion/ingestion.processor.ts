@@ -51,17 +51,22 @@ export class IngestionProcessor extends WorkerHost {
             documentId,
             chunkIndex: index,
             content,
-            tokenCount: content.split(/\s+/).length, // rough word count
+            tokenCount: content.split(/\s+/).length,
           })),
         )
         .returning();
 
-      // 3. Generate embeddings for all chunks
+      // Sort by chunkIndex to guarantee the order matches the chunks array
+      const orderedRecords = [...chunkRecords].sort(
+        (a, b) => a.chunkIndex - b.chunkIndex,
+      );
+
+      // 3. Generate embeddings for all chunks (same order as chunks array)
       const embeddings = await this.embeddingService.embedAndStore(chunks);
 
       // 4. Insert embeddings into database
       await this.db.insert(schema.documentChunkEmbeddings).values(
-        chunkRecords.map((chunk, index) => ({
+        orderedRecords.map((chunk, index) => ({
           chunkId: chunk.id,
           embedding: embeddings[index],
           model: "jina-embeddings-v2-base-en",
