@@ -43,6 +43,13 @@
       "when": 1767787217887,
       "tag": "0005_material_rocket_raccoon",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1747649400000,
+      "tag": "0006_match_document_chunks_rpc",
+      "breakpoints": true
     }
   ]
 }
