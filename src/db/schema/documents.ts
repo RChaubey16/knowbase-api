@@ -1,4 +1,12 @@
-import { pgTable, uuid, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  text,
+  timestamp,
+  index,
+  integer,
+  vector,
+} from "drizzle-orm/pg-core";
 import { workspaces } from "./workspaces";
 import { documentTypeEnum, documentStatusEnum } from "./enums";
 import { organisationMembers } from "./organisation-members";
@@ -18,7 +26,7 @@ export const documents = pgTable("documents", {
 
   title: text("title").notNull(),
   type: documentTypeEnum("type").notNull().default("text"),
-  status: documentStatusEnum("status").notNull().default("ready"),
+  status: documentStatusEnum("status").notNull().default("processing"),
   source: text("source"), // "manual", "url", later useful
 
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -47,3 +55,50 @@ export const documentContents = pgTable("document_contents", {
     .defaultNow()
     .notNull(),
 });
+
+// DOCUMENT CHUNKS
+export const documentChunks = pgTable(
+  "document_chunks",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    content: text("content").notNull(),
+    tokenCount: integer("token_count"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    documentIdIdx: index("document_chunks_document_id_idx").on(
+      table.documentId,
+    ),
+    documentChunkOrderIdx: index("document_chunk_order_idx").on(
+      table.documentId,
+      table.chunkIndex,
+    ),
+  }),
+);
+
+// DOCUMENT CHUNK EMBEDDINGS
+export const documentChunkEmbeddings = pgTable(
+  "document_chunk_embeddings",
+  {
+    chunkId: uuid("chunk_id")
+      .primaryKey()
+      .references(() => documentChunks.id, { onDelete: "cascade" }),
+    embedding: vector("embedding", { dimensions: 768 }),
+    model: text("model").notNull().default("jina-embeddings-v2-base-en"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    embeddingIdx: index("embedding_idx").using(
+      "hnsw",
+      table.embedding.op("vector_cosine_ops"),
+    ),
+  }),
+);

@@ -17,7 +17,7 @@ export class DocumentsService {
     @Inject("DB")
     private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly ragService: RagService,
-  ) {}
+  ) { }
 
   /**
    * Creates a new document in a workspace
@@ -39,6 +39,9 @@ export class DocumentsService {
       organisationMemberId,
     );
 
+    const isIndexed = dto.isIndexed ?? false;
+    const docStatus = isIndexed ? "processing" : "ready";
+
     const [document] = await this.db.transaction(async (tx) => {
       const [doc] = await tx
         .insert(schema.documents)
@@ -47,7 +50,7 @@ export class DocumentsService {
           createdByMemberId: organisationMemberId,
           title: dto.title.trim(),
           type: dto.type ?? "text",
-          status: "ready",
+          status: docStatus,
           source: dto.source ?? "manual",
         })
         .returning();
@@ -60,9 +63,8 @@ export class DocumentsService {
       return [doc];
     });
 
-    const isIndexed = dto.isIndexed ?? false;
     if (isIndexed) {
-      this.ragService.indexDocument(document.id, dto.content);
+      await this.ragService.indexDocument(document.id, dto.content);
     }
 
     return document;
@@ -189,12 +191,15 @@ export class DocumentsService {
       organisationId,
       organisationMemberId,
     );
+    const isIndexed = dto.isIndexed ?? false;
+    const docStatus = isIndexed ? "processing" : "ready";
 
     const updated = await this.db.transaction(async (tx) => {
       const [doc] = await tx
         .update(schema.documents)
         .set({
           title: dto.title.trim(),
+          status: docStatus,
           updatedAt: new Date(),
         })
         .where(
@@ -220,6 +225,10 @@ export class DocumentsService {
 
       return doc;
     });
+
+    if (isIndexed) {
+      await this.ragService.indexDocument(updated.id, dto.content, true);
+    }
 
     return updated;
   }
@@ -262,6 +271,7 @@ export class DocumentsService {
 
   async search(
     query: string,
+    mode: string,
     workspaceIdentifier: string,
     organisationId: string,
     organisationMemberId: string,
@@ -275,27 +285,43 @@ export class DocumentsService {
 
     const safeLimit = Math.min(limit, 50);
 
-    return this.db.execute(sql`
-   SELECT
-      d.id,
-      d.title,
-      d.type,
-      d.status,
-      dc.raw_content AS snippet,
-      ts_rank(
-        d.search_vector || dc.search_vector,
-        plainto_tsquery('english', ${query})
-      ) AS rank
-    FROM documents d
-    JOIN document_contents dc ON dc.document_id = d.id
-    WHERE
-      d.workspace_id = ${workspaceId}
-      AND d.archived_at IS NULL
-      AND (d.search_vector || dc.search_vector)
-          @@ plainto_tsquery('english', ${query})
-    ORDER BY rank DESC
-    LIMIT ${safeLimit};
-  `);
+    if (mode === "simple") {
+      return this.db.execute(sql`
+     SELECT
+        d.id,
+        d.title,
+        d.type,
+        d.status,
+        dc.raw_content AS snippet,
+        ts_rank(
+          d.search_vector || dc.search_vector,
+          plainto_tsquery('english', ${query})
+        ) AS rank
+      FROM documents d
+      JOIN document_contents dc ON dc.document_id = d.id
+      WHERE
+        d.workspace_id = ${workspaceId}
+        AND d.archived_at IS NULL
+        AND (d.search_vector || dc.search_vector)
+            @@ plainto_tsquery('english', ${query})
+      ORDER BY rank DESC
+      LIMIT ${safeLimit};
+    `);
+    }
+
+    // RAG mode
+    const payload = {
+      workspaceId,
+      query,
+      topK: 3,
+    };
+    const answer = await this.ragService.answerQuery(payload);
+
+    return [
+      {
+        snippet: answer,
+      },
+    ];
   }
 
   /**
