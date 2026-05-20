@@ -1,80 +1,112 @@
 # Knowbase API
 
-A powerful, clean, and efficient knowledge base API built with **NestJS**, **Drizzle ORM**, and **PostgreSQL**.
+The backend for Knowbase. A REST API built with NestJS that handles user accounts, organisations, workspaces, documents, full-text search, and AI-powered semantic search (RAG).
 
 > [!WARNING]
 > **This project is currently under active development.** Features and APIs may change without notice.
 
-## 🚀 Features
+## Tech Stack
 
-- **🔐 Robust Authentication**: Secure access via Google OAuth2 and JWT-based authentication.
-- **🏢 Workspace Management**: Organize your data with workspaces, allowing for seamless collaboration and multi-tenancy.
-- **📄 Document Management**: Create, manage, and query documents efficiently within your workspaces.
-- **💾 Modern Tech Stack**: Built with TypeScript, Drizzle ORM for type-safe database interactions, and NestJS for a scalable architecture.
+| Technology | Role |
+|---|---|
+| **NestJS v11** | Web framework — modules, controllers, services |
+| **Drizzle ORM** | Type-safe database queries |
+| **PostgreSQL (Supabase)** | Database + pgvector for AI embeddings |
+| **BullMQ + Redis** | Background job queue for document indexing |
+| **Passport.js + JWT** | Google OAuth2 authentication |
+| **Jina AI** | Text embeddings (768-dim) for semantic search |
+| **Google Gemini** | LLM for RAG answer generation |
 
-## 🛠️ Tech Stack
-
-- **Framework**: [NestJS](https://nestjs.com/)
-- **Database**: [PostgreSQL](https://www.postgresql.org/) (driver: [postgres](https://github.com/porsager/postgres))
-- **ORM**: [Drizzle ORM](https://orm.drizzle.team/)
-- **Auth**: [Passport.js](https://www.passportjs.org/) (JWT & Google OAuth2)
-- **Validation**: [class-validator](https://github.com/typestack/class-validator) & [class-transformer](https://github.com/typestack/class-transformer)
-
-## 🏁 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or later)
-- [pnpm](https://pnpm.io/)
-- [PostgreSQL](https://www.postgresql.org/)
+- Node.js 18+
+- pnpm
+- Redis (for the BullMQ job queue)
+- A Supabase project with pgvector enabled
 
 ### Installation
 
-1.  **Clone the repository**:
-    ```bash
-    git clone https://github.com/your-username/knowbase-api.git
-    cd knowbase-api
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    pnpm install
-    ```
-
-3.  **Configure environment variables**:
-    Create a `.env` file in the root directory and add the necessary configuration. Refer to `.env.example` (if available) or the configuration below:
-    ```env
-    DATABASE_URL=postgres://user:password@localhost:5432/knowbase
-    JWT_SECRET=your_jwt_secret
-    GOOGLE_CLIENT_ID=your_google_id
-    GOOGLE_CLIENT_SECRET=your_google_secret
-    ```
-
-4.  **Database Migration**:
-    ```bash
-    pnpm drizzle-kit push
-    ```
-
-### Running the Project
-
 ```bash
-# Development (watch mode)
-pnpm run start:dev
-
-# Production
-pnpm run build
-pnpm run start:prod
+pnpm install
 ```
 
-## 📜 Available Scripts
+### Environment Variables
 
-- `pnpm run build`: Build the application for production.
-- `pnpm run format`: Format code using Prettier.
-- `pnpm run lint`: Lint code using ESLint.
-- `pnpm run test`: Run unit tests using Jest.
-- `pnpm run test:e2e`: Run end-to-end tests.
-- `pnpm run test:cov`: Generate test coverage report.
+Create a `.env` file:
 
-## 📄 License
+```env
+# Database
+DATABASE_URL=              # Supabase pooler URL (port 6543)
 
-This project is [UNLICENSED](LICENSE).
+# Auth
+JWT_SECRET=
+JWT_REFRESH_SECRET=
+JWT_EXPIRES_IN=
+GOOGLE_AUTH_CLIENT_ID=
+GOOGLE_AUTH_CLIENT_SECRET=
+GOOGLE_AUTH_CALLBACK_URL=  # e.g. http://localhost:3000/auth/google/callback
+GOOGLE_AUTH_PROJECT_ID=
+FRONT_END_URL=             # e.g. http://localhost:3001
+
+# Supabase (vector search)
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+
+# RAG / AI
+JINA_AI_API_KEY=
+GEMINI_API_KEY=
+GEMINI_MODEL=              # default: gemini-2.0-flash
+
+# Queue (Redis)
+REDIS_HOST=                # default: localhost
+REDIS_PORT=                # default: 6379
+```
+
+### Database Migrations
+
+Schema changes are tracked in `drizzle/`. To generate a new migration after editing the schema:
+
+```bash
+pnpm drizzle-kit generate
+```
+
+> **Note:** Migrations 0000–0004 were applied directly to Supabase, so the `__drizzle_migrations` tracking table does not exist. Apply new migrations with a direct Node script rather than `pnpm drizzle-kit migrate` until the tracking table is bootstrapped.
+
+### Running
+
+```bash
+pnpm start:dev   # development with hot-reload (port 3000)
+pnpm build
+pnpm start:prod
+```
+
+## Features
+
+- **Google OAuth + JWT** — `httpOnly` cookie-based auth with 15-minute access tokens and 7-day rotating refresh tokens
+- **Multi-tenant** — Organisations → Workspaces → Documents hierarchy with role-based access control
+- **Full-text search** — PostgreSQL `tsvector` + `plainto_tsquery` with relevance ranking
+- **RAG semantic search** — Jina AI embeddings + pgvector HNSW index + Gemini generation
+- **Background indexing** — BullMQ processes document chunking and embedding asynchronously (retries 3× with exponential backoff)
+- **Soft deletes** — Documents set `archivedAt`; never hard-deleted via the API
+
+## Available Scripts
+
+```bash
+pnpm start:dev       # development server
+pnpm build           # production build
+pnpm test            # unit tests (Jest)
+pnpm test:e2e        # end-to-end tests
+pnpm test:cov        # test coverage report
+pnpm lint            # ESLint
+pnpm drizzle-kit generate  # generate DB migration
+```
+
+## API Overview
+
+See [`docs/api.md`](../docs/api.md) for the full endpoint reference and [`docs/postman.md`](../docs/postman.md) for a Postman testing guide.
+
+## License
+
+UNLICENSED
