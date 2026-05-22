@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -13,6 +14,7 @@ import { OrganisationContextGuard } from "./guards/organisation-context.guard";
 import { OrganisationsService } from "./organisations.service";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 import { CreateOrganisationDto } from "./dto/create-organisation.dto";
+import { UpdateOrganisationDto } from "./dto/update-organisation.dto";
 import type { RequestWithJwtAndOrg } from "./interfaces/request-with-org.interface";
 import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 
@@ -69,6 +71,18 @@ export class OrganisationsController {
       req.organisation.organisationMemberId,
       dto,
     );
+  }
+
+  /**
+   * PATCH /organisations/:id
+   */
+  @Patch(":id")
+  update(
+    @Req() req: RequestWithJwtUser,
+    @Param("id") id: string,
+    @Body() dto: UpdateOrganisationDto,
+  ) {
+    return this.organisationsService.updateOrganisation(req.user.userId, id, dto.name);
   }
 
   /**

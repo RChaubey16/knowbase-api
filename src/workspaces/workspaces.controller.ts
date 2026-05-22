@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
 import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
 import { AddWorkspaceMembersDto } from "./dto/add-workspace-members.dto";
+import { UpdateWorkspaceDto } from "./dto/update-workspace.dto";
 
 @Controller("workspaces")
 @UseGuards(JwtAuthGuard, OrganisationContextGuard)
@@ -52,6 +54,23 @@ export class WorkspacesController {
       req.params.slug,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
+    );
+  }
+
+  /**
+   * PATCH /workspaces/:id
+   */
+  @Patch(":id")
+  update(
+    @Req() req: RequestWithJwtAndOrg,
+    @Param("id") workspaceId: string,
+    @Body() dto: UpdateWorkspaceDto,
+  ) {
+    return this.workspacesService.updateWorkspace(
+      req.user.userId,
+      req.organisation.organisationId,
+      workspaceId,
+      dto.name,
     );
   }
 

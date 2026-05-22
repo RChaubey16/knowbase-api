@@ -124,6 +124,44 @@ export class WorkspacesService {
     return member;
   }
 
+  async updateWorkspace(
+    userId: string,
+    organisationId: string,
+    workspaceId: string,
+    name: string,
+  ) {
+    const [member] = await this.db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+      .innerJoin(
+        organisationMembers,
+        eq(workspaceMembers.organisationMemberId, organisationMembers.id),
+      )
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(workspaceMembers.role, "owner"),
+          eq(workspaces.organisationId, organisationId),
+          eq(workspaces.id, workspaceId),
+        ),
+      );
+
+    if (!member) {
+      throw new ForbiddenException(
+        "Workspace not found or insufficient permissions",
+      );
+    }
+
+    const [updated] = await this.db
+      .update(workspaces)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(workspaces.id, workspaceId))
+      .returning();
+
+    return updated;
+  }
+
   async deleteWorkspace(
     userId: string,
     organisationId: string,

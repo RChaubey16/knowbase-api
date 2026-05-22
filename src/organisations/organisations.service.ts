@@ -191,6 +191,33 @@ export class OrganisationsService {
     });
   }
 
+  async updateOrganisation(userId: string, orgId: string, name: string) {
+    const [member] = await this.db
+      .select({ id: organisationMembers.id })
+      .from(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.userId, userId),
+          eq(organisationMembers.role, "owner"),
+          eq(organisationMembers.organisationId, orgId),
+        ),
+      );
+
+    if (!member) {
+      throw new ForbiddenException(
+        "Organisation not found or insufficient permissions",
+      );
+    }
+
+    const [updated] = await this.db
+      .update(organisations)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(organisations.id, orgId))
+      .returning();
+
+    return updated;
+  }
+
   async deleteOrganisation(userId: string, organisationId: string) {
     const [member] = await this.db
       .select({ id: organisationMembers.id })
