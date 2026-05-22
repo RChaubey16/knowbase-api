@@ -27,7 +27,8 @@ export const documents = pgTable("documents", {
   title: text("title").notNull(),
   type: documentTypeEnum("type").notNull().default("text"),
   status: documentStatusEnum("status").notNull().default("processing"),
-  source: text("source"), // "manual", "url", later useful
+  source: text("source"),
+  sourceUrl: text("source_url"),
 
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()

@@ -50,6 +50,13 @@
       "when": 1747649400000,
       "tag": "0006_match_document_chunks_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779425609578,
+      "tag": "0007_breezy_green_goblin",
+      "breakpoints": true
     }
   ]
 }

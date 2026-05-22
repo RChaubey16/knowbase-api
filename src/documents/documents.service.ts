@@ -2,8 +2,10 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  BadRequestException,
   Inject,
 } from "@nestjs/common";
+import * as cheerio from "cheerio";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq, isNull, desc, sql } from "drizzle-orm";
 import * as schema from "../db/schema";
@@ -39,6 +41,20 @@ export class DocumentsService {
       organisationMemberId,
     );
 
+    let rawContent: string;
+    let sourceUrl: string | undefined;
+
+    if (dto.type === "url" && dto.url) {
+      rawContent = await this.fetchUrlContent(dto.url);
+      sourceUrl = dto.url;
+    } else if (dto.content?.trim()) {
+      rawContent = dto.content;
+    } else {
+      throw new BadRequestException(
+        "Either content or a valid URL is required.",
+      );
+    }
+
     const isIndexed = dto.isIndexed ?? false;
     const docStatus = isIndexed ? "processing" : "ready";
 
@@ -52,19 +68,20 @@ export class DocumentsService {
           type: dto.type ?? "text",
           status: docStatus,
           source: dto.source ?? "manual",
+          sourceUrl: sourceUrl ?? null,
         })
         .returning();
 
       await tx.insert(schema.documentContents).values({
         documentId: doc.id,
-        rawContent: dto.content,
+        rawContent,
       });
 
       return [doc];
     });
 
     if (isIndexed) {
-      await this.ragService.indexDocument(document.id, dto.content);
+      await this.ragService.indexDocument(document.id, rawContent);
     }
 
     return document;
@@ -99,7 +116,9 @@ export class DocumentsService {
         content: schema.documentContents.rawContent,
         type: schema.documents.type,
         source: schema.documents.source,
+        sourceUrl: schema.documents.sourceUrl,
         status: schema.documents.status,
+        snippet: sql<string>`left(${schema.documentContents.rawContent}, 120)`,
         isIndexed: sql<boolean>`exists(select 1 from ${schema.documentChunks} where ${schema.documentChunks.documentId} = ${schema.documents.id})`,
         createdAt: schema.documents.createdAt,
         updatedAt: schema.documents.updatedAt,
@@ -145,6 +164,7 @@ export class DocumentsService {
         title: schema.documents.title,
         type: schema.documents.type,
         source: schema.documents.source,
+        sourceUrl: schema.documents.sourceUrl,
         status: schema.documents.status,
         isIndexed: sql<boolean>`exists(select 1 from ${schema.documentChunks} where ${schema.documentChunks.documentId} = ${schema.documents.id})`,
         createdAt: schema.documents.createdAt,
@@ -367,6 +387,43 @@ export class DocumentsService {
       .where(eq(schema.documents.id, documentId));
 
     await this.ragService.indexDocument(doc.id, doc.content, true);
+  }
+
+  private async fetchUrlContent(url: string): Promise<string> {
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        headers: { "User-Agent": "Knowbase/1.0 (document indexer)" },
+        signal: AbortSignal.timeout(15_000),
+      });
+    } catch {
+      throw new BadRequestException(`Could not reach "${url}". Check the URL and try again.`);
+    }
+
+    if (!response.ok) {
+      throw new BadRequestException(
+        `Failed to fetch "${url}": ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    $("script, style, nav, header, footer, noscript, iframe").remove();
+
+    const text = $("body")
+      .text()
+      .replace(/[\t ]+/g, " ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+    if (!text) {
+      throw new BadRequestException(
+        "No readable content found at the provided URL.",
+      );
+    }
+
+    return text;
   }
 
   /**

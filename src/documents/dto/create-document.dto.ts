@@ -4,6 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
 } from "class-validator";
 
@@ -13,9 +14,13 @@ export class CreateDocumentDto {
   @MaxLength(255)
   title: string;
 
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  content: string;
+  content?: string;
+
+  @IsOptional()
+  @IsUrl()
+  url?: string;
 
   @IsIn(["text", "url", "pdf"])
   type: "text" | "url" | "pdf";
