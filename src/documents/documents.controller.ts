@@ -11,7 +11,11 @@ import {
   Delete,
   HttpCode,
   HttpStatus,
+  BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from "@nestjs/common";
+import { FileInterceptor } from "@nestjs/platform-express";
 import { DocumentsService } from "./documents.service";
 import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
@@ -75,6 +79,30 @@ export class DocumentsController {
       documentId,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
+    );
+  }
+
+  /**
+   * POST /workspaces/:workspace/documents/upload
+   */
+  @Post("upload")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadPdf(
+    @Param("workspace") workspace: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body("title") title: string,
+    @Body("isIndexed") isIndexed: string,
+    @Req() req: RequestWithJwtAndOrg,
+  ) {
+    if (!file) throw new BadRequestException("No file uploaded");
+    if (!title?.trim()) throw new BadRequestException("Title is required");
+    return this.documentsService.uploadPdf(
+      workspace,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+      file,
+      title,
+      isIndexed === "true",
     );
   }
 

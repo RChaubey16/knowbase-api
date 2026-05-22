@@ -6,6 +6,10 @@ import {
   Inject,
 } from "@nestjs/common";
 import * as cheerio from "cheerio";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { PDFParse } = require("pdf-parse") as {
+  PDFParse: new (opts: { data: Buffer }) => { getText(): Promise<{ text: string }> };
+};
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq, isNull, desc, sql } from "drizzle-orm";
 import * as schema from "../db/schema";
@@ -69,6 +73,63 @@ export class DocumentsService {
           status: docStatus,
           source: dto.source ?? "manual",
           sourceUrl: sourceUrl ?? null,
+        })
+        .returning();
+
+      await tx.insert(schema.documentContents).values({
+        documentId: doc.id,
+        rawContent,
+      });
+
+      return [doc];
+    });
+
+    if (isIndexed) {
+      await this.ragService.indexDocument(document.id, rawContent);
+    }
+
+    return document;
+  }
+
+  async uploadPdf(
+    workspaceIdentifier: string,
+    organisationId: string,
+    organisationMemberId: string,
+    file: Express.Multer.File,
+    title: string,
+    isIndexed: boolean,
+  ) {
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
+      organisationId,
+      organisationMemberId,
+    );
+
+    let rawContent: string;
+    try {
+      const parser = new PDFParse({ data: file.buffer });
+      const result = await parser.getText();
+      rawContent = result.text?.trim();
+    } catch {
+      throw new BadRequestException("Failed to parse PDF");
+    }
+
+    if (!rawContent) {
+      throw new BadRequestException("PDF has no extractable text");
+    }
+
+    const docStatus = isIndexed ? "processing" : "ready";
+
+    const [document] = await this.db.transaction(async (tx) => {
+      const [doc] = await tx
+        .insert(schema.documents)
+        .values({
+          workspaceId,
+          createdByMemberId: organisationMemberId,
+          title: title.trim(),
+          type: "pdf",
+          status: docStatus,
+          source: "pdf",
         })
         .returning();
 
