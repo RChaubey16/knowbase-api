@@ -10,6 +10,7 @@ import {
   Put,
   Delete,
   HttpCode,
+  HttpStatus,
 } from "@nestjs/common";
 import { DocumentsService } from "./documents.service";
 import { CreateDocumentDto } from "./dto/create-document.dto";
@@ -110,6 +111,24 @@ export class DocumentsController {
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
       dto,
+    );
+  }
+
+  /**
+   * POST /workspaces/:workspace/documents/:documentId/reindex
+   */
+  @Post(":documentId/reindex")
+  @HttpCode(HttpStatus.ACCEPTED)
+  async reindexDocument(
+    @Param("workspace") workspace: string,
+    @Param("documentId") documentId: string,
+    @Req() req: RequestWithJwtAndOrg,
+  ) {
+    await this.documentsService.reindexDocument(
+      workspace,
+      documentId,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
     );
   }
 

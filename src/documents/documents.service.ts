@@ -100,6 +100,7 @@ export class DocumentsService {
         type: schema.documents.type,
         source: schema.documents.source,
         status: schema.documents.status,
+        isIndexed: sql<boolean>`exists(select 1 from ${schema.documentChunks} where ${schema.documentChunks.documentId} = ${schema.documents.id})`,
         createdAt: schema.documents.createdAt,
         updatedAt: schema.documents.updatedAt,
       })
@@ -145,6 +146,7 @@ export class DocumentsService {
         type: schema.documents.type,
         source: schema.documents.source,
         status: schema.documents.status,
+        isIndexed: sql<boolean>`exists(select 1 from ${schema.documentChunks} where ${schema.documentChunks.documentId} = ${schema.documents.id})`,
         createdAt: schema.documents.createdAt,
         updatedAt: schema.documents.updatedAt,
         content: schema.documentContents.rawContent,
@@ -322,6 +324,49 @@ export class DocumentsService {
         snippet: answer,
       },
     ];
+  }
+
+  async reindexDocument(
+    workspaceIdentifier: string,
+    documentId: string,
+    organisationId: string,
+    organisationMemberId: string,
+  ) {
+    const workspaceId = await this.assertWorkspaceAccess(
+      workspaceIdentifier,
+      organisationId,
+      organisationMemberId,
+    );
+
+    const [doc] = await this.db
+      .select({
+        id: schema.documents.id,
+        content: schema.documentContents.rawContent,
+      })
+      .from(schema.documents)
+      .innerJoin(
+        schema.documentContents,
+        eq(schema.documents.id, schema.documentContents.documentId),
+      )
+      .where(
+        and(
+          eq(schema.documents.id, documentId),
+          eq(schema.documents.workspaceId, workspaceId),
+          isNull(schema.documents.archivedAt),
+        ),
+      )
+      .limit(1);
+
+    if (!doc) {
+      throw new NotFoundException("Document not found");
+    }
+
+    await this.db
+      .update(schema.documents)
+      .set({ status: "processing", updatedAt: new Date() })
+      .where(eq(schema.documents.id, documentId));
+
+    await this.ragService.indexDocument(doc.id, doc.content, true);
   }
 
   /**
