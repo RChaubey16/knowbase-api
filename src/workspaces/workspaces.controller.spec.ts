@@ -13,6 +13,8 @@ const mockWorkspacesService = {
   deleteWorkspace: jest.fn(),
   addViewers: jest.fn(),
   updateWorkspace: jest.fn(),
+  listWorkspaceMembers: jest.fn(),
+  removeWorkspaceMember: jest.fn(),
 };
 
 const mockReq = {
@@ -87,6 +89,29 @@ describe("WorkspacesController", () => {
 
       expect(result).toEqual(updated);
       expect(service.updateWorkspace).toHaveBeenCalledWith("user-123", "org-1", "ws-1", "Renamed");
+    });
+  });
+
+  describe("listWorkspaceMembers", () => {
+    it("returns members for the given workspace", async () => {
+      const members = [{ id: "wm-1", email: "a@example.com", role: "viewer" }];
+      jest.spyOn(service, "listWorkspaceMembers").mockResolvedValueOnce(members as any);
+
+      const result = await controller.listWorkspaceMembers(mockReq, "my-workspace");
+
+      expect(result).toEqual(members);
+      expect(service.listWorkspaceMembers).toHaveBeenCalledWith("my-workspace", "org-1", "member-1");
+    });
+  });
+
+  describe("removeWorkspaceMember", () => {
+    it("delegates to service with member ID and org context", async () => {
+      jest.spyOn(service, "removeWorkspaceMember").mockResolvedValueOnce({ success: true } as any);
+
+      const result = await controller.removeWorkspaceMember(mockReq, "wm-99");
+
+      expect(result).toEqual({ success: true });
+      expect(service.removeWorkspaceMember).toHaveBeenCalledWith("wm-99", "org-1", "member-1");
     });
   });
 });

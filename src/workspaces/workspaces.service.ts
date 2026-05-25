@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 
 import * as schema from "../db/schema";
@@ -191,6 +191,116 @@ export class WorkspacesService {
     }
 
     await this.db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+
+    return { success: true };
+  }
+
+  async listWorkspaceMembers(
+    workspaceSlugOrId: string,
+    organisationId: string,
+    organisationMemberId: string,
+  ) {
+    const [workspace] = await this.db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .innerJoin(
+        workspaceMembers,
+        eq(workspaces.id, workspaceMembers.workspaceId),
+      )
+      .where(
+        and(
+          eq(workspaces.organisationId, organisationId),
+          eq(workspaceMembers.organisationMemberId, organisationMemberId),
+          workspaceSlugOrId.includes("-") && workspaceSlugOrId.length === 36
+            ? eq(workspaces.id, workspaceSlugOrId)
+            : eq(workspaces.slug, workspaceSlugOrId),
+        ),
+      )
+      .limit(1);
+
+    if (!workspace) {
+      throw new NotFoundException("Workspace not found");
+    }
+
+    return this.db
+      .select({
+        id: workspaceMembers.id,
+        organisationMemberId: workspaceMembers.organisationMemberId,
+        role: workspaceMembers.role,
+        joinedAt: workspaceMembers.joinedAt,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        avatar: users.avatar,
+      })
+      .from(workspaceMembers)
+      .innerJoin(
+        organisationMembers,
+        eq(workspaceMembers.organisationMemberId, organisationMembers.id),
+      )
+      .innerJoin(users, eq(organisationMembers.userId, users.id))
+      .where(eq(workspaceMembers.workspaceId, workspace.id));
+  }
+
+  async removeWorkspaceMember(
+    targetMemberId: string,
+    organisationId: string,
+    requestingOrgMemberId: string,
+  ) {
+    const [target] = await this.db
+      .select({ id: workspaceMembers.id, workspaceId: workspaceMembers.workspaceId, role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .innerJoin(workspaces, eq(workspaceMembers.workspaceId, workspaces.id))
+      .where(
+        and(
+          eq(workspaceMembers.id, targetMemberId),
+          eq(workspaces.organisationId, organisationId),
+        ),
+      )
+      .limit(1);
+
+    if (!target) {
+      throw new NotFoundException("Workspace member not found");
+    }
+
+    const [requester] = await this.db
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, target.workspaceId),
+          eq(workspaceMembers.organisationMemberId, requestingOrgMemberId),
+        ),
+      )
+      .limit(1);
+
+    if (!requester || requester.role !== "owner") {
+      throw new ForbiddenException(
+        "Only workspace owners can remove members",
+      );
+    }
+
+    if (target.role === "owner") {
+      const [{ ownerCount }] = await this.db
+        .select({ ownerCount: count() })
+        .from(workspaceMembers)
+        .where(
+          and(
+            eq(workspaceMembers.workspaceId, target.workspaceId),
+            eq(workspaceMembers.role, "owner"),
+          ),
+        );
+
+      if (ownerCount <= 1) {
+        throw new ForbiddenException(
+          "Cannot remove the last owner of a workspace",
+        );
+      }
+    }
+
+    await this.db
+      .delete(workspaceMembers)
+      .where(eq(workspaceMembers.id, targetMemberId));
 
     return { success: true };
   }

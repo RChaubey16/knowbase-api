@@ -12,6 +12,9 @@ const mockOrgService = {
   getOrganisationBySlug: jest.fn(),
   getUserOrgDetails: jest.fn(),
   addOrganisationMembers: jest.fn(),
+  listOrganisationMembers: jest.fn(),
+  removeOrganisationMember: jest.fn(),
+  updateOrganisationMemberRole: jest.fn(),
   updateOrganisation: jest.fn(),
   deleteOrganisation: jest.fn(),
 };
@@ -102,6 +105,41 @@ describe("OrganisationsController", () => {
       expect(mockOrgService.addOrganisationMembers).toHaveBeenCalledWith(
         "org-1", "member-1", { emails: ["a@example.com"] },
       );
+    });
+  });
+
+  describe("listOrgMembers", () => {
+    it("returns org members for the given slug", async () => {
+      const members = [{ id: "m-1", email: "a@example.com", role: "member" }];
+      mockOrgService.listOrganisationMembers.mockResolvedValueOnce(members);
+
+      const result = await controller.listOrgMembers(mockUserReq);
+
+      expect(result).toEqual(members);
+      expect(mockOrgService.listOrganisationMembers).toHaveBeenCalledWith("my-org", "user-1");
+    });
+  });
+
+  describe("removeOrgMember", () => {
+    it("delegates to service with user ID and member ID", async () => {
+      mockOrgService.removeOrganisationMember.mockResolvedValueOnce({ success: true });
+
+      const result = await controller.removeOrgMember(mockUserReq, "member-99");
+
+      expect(result).toEqual({ success: true });
+      expect(mockOrgService.removeOrganisationMember).toHaveBeenCalledWith("user-1", "member-99");
+    });
+  });
+
+  describe("updateOrgMemberRole", () => {
+    it("delegates to service with user ID, member ID, and new role", async () => {
+      const updated = { id: "member-99", role: "admin" };
+      mockOrgService.updateOrganisationMemberRole.mockResolvedValueOnce(updated);
+
+      const result = await controller.updateOrgMemberRole(mockUserReq, "member-99", { role: "admin" });
+
+      expect(result).toEqual(updated);
+      expect(mockOrgService.updateOrganisationMemberRole).toHaveBeenCalledWith("user-1", "member-99", "admin");
     });
   });
 });

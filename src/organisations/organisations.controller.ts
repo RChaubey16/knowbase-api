@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -17,6 +18,7 @@ import { CreateOrganisationDto } from "./dto/create-organisation.dto";
 import { UpdateOrganisationDto } from "./dto/update-organisation.dto";
 import type { RequestWithJwtAndOrg } from "./interfaces/request-with-org.interface";
 import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
+import { UpdateOrgMemberRoleDto } from "./dto/update-org-member-role.dto";
 
 @Controller("organisations")
 @UseGuards(JwtAuthGuard)
@@ -74,6 +76,37 @@ export class OrganisationsController {
   }
 
   /**
+   * DELETE /organisations/members/:memberId
+   */
+  @Delete("members/:memberId")
+  @HttpCode(204)
+  removeOrgMember(
+    @Req() req: RequestWithJwtUser,
+    @Param("memberId") memberId: string,
+  ) {
+    return this.organisationsService.removeOrganisationMember(
+      req.user.userId,
+      memberId,
+    );
+  }
+
+  /**
+   * PATCH /organisations/members/:memberId
+   */
+  @Patch("members/:memberId")
+  updateOrgMemberRole(
+    @Req() req: RequestWithJwtUser,
+    @Param("memberId") memberId: string,
+    @Body() dto: UpdateOrgMemberRoleDto,
+  ) {
+    return this.organisationsService.updateOrganisationMemberRole(
+      req.user.userId,
+      memberId,
+      dto.role,
+    );
+  }
+
+  /**
    * PATCH /organisations/:id
    */
   @Patch(":id")
@@ -101,6 +134,17 @@ export class OrganisationsController {
     return this.organisationsService.getUserOrgDetails(
       req.user.userId,
       req.params.slug,
+    );
+  }
+
+  /**
+   * GET /organisations/:slug/members
+   */
+  @Get("/:slug/members")
+  listOrgMembers(@Req() req: RequestWithJwtUser) {
+    return this.organisationsService.listOrganisationMembers(
+      req.params.slug,
+      req.user.userId,
     );
   }
 }

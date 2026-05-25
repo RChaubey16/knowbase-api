@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
@@ -98,6 +99,37 @@ export class WorkspacesController {
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
       dto,
+    );
+  }
+
+  /**
+   * DELETE /workspaces/members/:memberId
+   */
+  @Delete("members/:memberId")
+  @HttpCode(204)
+  removeWorkspaceMember(
+    @Req() req: RequestWithJwtAndOrg,
+    @Param("memberId") memberId: string,
+  ) {
+    return this.workspacesService.removeWorkspaceMember(
+      memberId,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+    );
+  }
+
+  /**
+   * GET /workspaces/:workspace/members
+   */
+  @Get("/:workspace/members")
+  listWorkspaceMembers(
+    @Req() req: RequestWithJwtAndOrg,
+    @Param("workspace") workspace: string,
+  ) {
+    return this.workspacesService.listWorkspaceMembers(
+      workspace,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
     );
   }
 

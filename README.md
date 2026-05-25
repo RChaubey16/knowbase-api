@@ -86,26 +86,88 @@ pnpm start:prod
 
 - **Google OAuth + JWT** — `httpOnly` cookie-based auth with 15-minute access tokens and 7-day rotating refresh tokens
 - **Multi-tenant** — Organisations → Workspaces → Documents hierarchy with role-based access control
+- **Member management** — Invite, list, remove, and change roles for org and workspace members; last-owner protection enforced server-side
+- **Document ingestion** — Text, URL (Cheerio scraper), and PDF (pdf-parse) document types
 - **Full-text search** — PostgreSQL `tsvector` + `plainto_tsquery` with relevance ranking
 - **RAG semantic search** — Jina AI embeddings + pgvector HNSW index + Gemini generation
-- **Background indexing** — BullMQ processes document chunking and embedding asynchronously (retries 3× with exponential backoff)
+- **Background indexing** — BullMQ processes document chunking and embedding asynchronously; re-index endpoint for failed documents
 - **Soft deletes** — Documents set `archivedAt`; never hard-deleted via the API
+
+## API Reference
+
+### Auth
+
+```
+GET  /auth/google                   Google OAuth redirect
+GET  /auth/google/callback          OAuth callback — sets access + refresh token cookies
+POST /auth/refresh                  Rotate both tokens
+GET  /auth/me                       Current user info
+POST /auth/logout                   Clears tokens
+```
+
+### Organisations
+
+```
+POST   /organisations                       Create org (max 3 owned per user)
+GET    /organisations                       List orgs for current user
+GET    /organisations/:slug                 Get org by slug
+GET    /organisations/:slug/me              Current user's membership details
+GET    /organisations/:slug/members         List all members            [any member]
+POST   /organisations/members               Invite members by email     [owner/admin, X-Organisation header]
+PATCH  /organisations/members/:memberId     Change a member's role      [owner]
+DELETE /organisations/members/:memberId     Remove a member             [owner/admin]
+PATCH  /organisations/:id                   Rename org                  [owner]
+DELETE /organisations/:id                   Delete org                  [owner]
+```
+
+### Workspaces
+
+All workspace routes require the `X-Organisation` header (org slug or ID).
+
+```
+GET    /workspaces                            List workspaces in org
+POST   /workspaces                            Create workspace
+GET    /workspaces/:slug                      Get workspace by slug
+GET    /workspaces/:slug/me                   Current user's membership details
+GET    /workspaces/:workspace/members         List all members            [any member]
+POST   /workspaces/members                    Invite members by email     [owner]
+DELETE /workspaces/members/:memberId          Remove a member             [owner]
+PATCH  /workspaces/:id                        Rename workspace            [owner]
+DELETE /workspaces/:id                        Delete workspace            [owner]
+```
+
+### Documents
+
+All document routes require `X-Organisation` header.
+
+```
+GET    /workspaces/:workspace/documents                         List documents (with snippet, isIndexed)
+POST   /workspaces/:workspace/documents                         Create text or URL document
+POST   /workspaces/:workspace/documents/upload                  Upload PDF (multipart/form-data)
+GET    /workspaces/:workspace/documents/search?q=&mode=         Full-text or RAG search
+GET    /workspaces/:workspace/documents/:documentId             Get document
+PUT    /workspaces/:workspace/documents/:documentId             Update document
+DELETE /workspaces/:workspace/documents/:documentId             Soft delete (204)
+POST   /workspaces/:workspace/documents/:documentId/reindex     Re-queue for embedding (202)
+```
+
+### RAG
+
+```
+POST /rag/query   { workspaceId, query, topK? } → { answer }   [X-Organisation header]
+```
 
 ## Available Scripts
 
 ```bash
 pnpm start:dev       # development server
 pnpm build           # production build
-pnpm test            # unit tests (Jest)
+pnpm test            # unit tests (Jest) — 78 tests across 13 suites
 pnpm test:e2e        # end-to-end tests
 pnpm test:cov        # test coverage report
 pnpm lint            # ESLint
 pnpm drizzle-kit generate  # generate DB migration
 ```
-
-## API Overview
-
-See [`docs/api.md`](../docs/api.md) for the full endpoint reference and [`docs/postman.md`](../docs/postman.md) for a Postman testing guide.
 
 ## License
 
