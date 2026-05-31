@@ -7,7 +7,7 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 import * as schema from "../db/schema";
 import { SupabaseService } from "src/supabase/supabase.service";
-import { GeminiService } from "./gemini/gemini.service";
+import { GroqService } from "./groq/groq.service";
 import { EmbeddingService } from "./embedding/embedding.service";
 import { Chunk } from "./rag.types";
 
@@ -18,7 +18,7 @@ export class RagService {
     @InjectQueue("rag-ingestion") private readonly ragQueue: Queue,
     private readonly supabase: SupabaseService,
     private readonly embeddingService: EmbeddingService,
-    private readonly geminiService: GeminiService,
+    private readonly groqService: GroqService,
   ) {}
 
   async indexDocument(
@@ -69,6 +69,6 @@ export class RagService {
 
     if (error) throw error;
 
-    return this.geminiService.generate(input.query, data || []);
+    return this.groqService.generate(input.query, data || []);
   }
 }

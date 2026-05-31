@@ -1,24 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
-interface JinaEmbeddingData {
-  embedding: number[];
-  index: number;
-  object: string;
-}
-
-interface JinaEmbeddingResponse {
-  model: string;
-  object: string;
-  data: JinaEmbeddingData[];
-  usage: {
-    total_tokens: number;
-    prompt_tokens: number;
-  };
-}
+type HFEmbeddingResponse = number[][] | number[][][];
 
 @Injectable()
 export class EmbeddingService {
+  private readonly model = "sentence-transformers/all-mpnet-base-v2";
+
   constructor(private readonly configService: ConfigService) {}
 
   async embedAndStore(chunks: string[]) {
@@ -30,31 +18,46 @@ export class EmbeddingService {
   }
 
   private async createEmbeddings(texts: string[]): Promise<number[][]> {
-    const apiKey = this.configService.get<string>("JINA_AI_API_KEY");
+    const apiKey = this.configService.get<string>("HUGGINGFACE_API_KEY");
     if (!apiKey) {
-      throw new Error("JINA_AI_API_KEY is not defined in the environment");
+      throw new Error("HUGGINGFACE_API_KEY is not defined in the environment");
     }
 
-    const response = await fetch("https://api.jina.ai/v1/embeddings", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `https://api-inference.huggingface.co/models/${this.model}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ inputs: texts }),
       },
-      body: JSON.stringify({
-        input: texts,
-        model: "jina-embeddings-v2-base-en",
-      }),
-    });
+    );
 
     if (!response.ok) {
       const body = await response.text();
       throw new Error(
-        `Jina embedding API error ${response.status}: ${body}`,
+        `HuggingFace embedding API error ${response.status}: ${body}`,
       );
     }
 
-    const data = (await response.json()) as JinaEmbeddingResponse;
-    return data.data.map((item) => item.embedding);
+    const data = (await response.json()) as HFEmbeddingResponse;
+
+    // Sentence-transformer models return number[][] (pooled).
+    // Non-pooled models return number[][][] (tokens × dims per input); take mean over tokens.
+    if (Array.isArray(data[0][0])) {
+      return (data as number[][][]).map((tokenEmbeddings) => {
+        const dims = tokenEmbeddings[0].length;
+        return tokenEmbeddings
+          .reduce(
+            (acc, vec) => acc.map((v, i) => v + vec[i]),
+            new Array<number>(dims).fill(0),
+          )
+          .map((v) => v / tokenEmbeddings.length);
+      });
+    }
+
+    return data as number[][];
   }
 }

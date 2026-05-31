@@ -3,7 +3,7 @@ import { getQueueToken } from "@nestjs/bullmq";
 import { RagService } from "./rag.service";
 import { SupabaseService } from "src/supabase/supabase.service";
 import { EmbeddingService } from "./embedding/embedding.service";
-import { GeminiService } from "./gemini/gemini.service";
+import { GroqService } from "./groq/groq.service";
 
 const mockDb = {
   select: jest.fn().mockReturnThis(),
@@ -27,7 +27,7 @@ const mockEmbeddingService = {
   embedQuery: jest.fn(),
 };
 
-const mockGeminiService = {
+const mockGroqService = {
   generate: jest.fn(),
 };
 
@@ -44,7 +44,7 @@ describe("RagService", () => {
         { provide: getQueueToken("rag-ingestion"), useValue: mockQueue },
         { provide: SupabaseService, useValue: mockSupabase },
         { provide: EmbeddingService, useValue: mockEmbeddingService },
-        { provide: GeminiService, useValue: mockGeminiService },
+        { provide: GroqService, useValue: mockGroqService },
       ],
     }).compile();
 
@@ -103,7 +103,7 @@ describe("RagService", () => {
 
       mockEmbeddingService.embedQuery.mockResolvedValueOnce(embedding);
       mockSupabase.getClient.mockReturnValueOnce({ rpc: rpcMock });
-      mockGeminiService.generate.mockResolvedValueOnce("The answer");
+      mockGroqService.generate.mockResolvedValueOnce("The answer");
 
       const result = await service.answerQuery({
         workspaceId: "ws-1",
@@ -117,7 +117,7 @@ describe("RagService", () => {
         match_workspace_id: "ws-1",
         match_count: 3,
       });
-      expect(mockGeminiService.generate).toHaveBeenCalledWith("What is X?", chunks);
+      expect(mockGroqService.generate).toHaveBeenCalledWith("What is X?", chunks);
       expect(result).toBe("The answer");
     });
 
