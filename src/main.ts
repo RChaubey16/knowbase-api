@@ -16,8 +16,13 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  const allowedOrigins = ["http://localhost:3001"];
+  if (process.env.FRONT_END_URL) {
+    allowedOrigins.push(process.env.FRONT_END_URL);
+  }
+
   app.enableCors({
-    origin: ["https://knowbase-app.vercel.app", "http://localhost:3001"],
+    origin: allowedOrigins,
     credentials: true,
   });
 
