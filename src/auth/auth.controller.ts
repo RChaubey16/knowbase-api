@@ -45,13 +45,12 @@ export class AuthController {
     const { accessToken, refreshToken } =
       await this.authService.handleGoogleLogin(req.user);
 
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // false for local FE
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? ("none" as const)
-          : ("lax" as const),
+      secure: isProduction,
+      sameSite: "lax" as const,
+      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     };
@@ -86,13 +85,12 @@ export class AuthController {
       refreshToken,
     );
 
+    const isProduction = process.env.NODE_ENV === "production";
     const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite:
-        process.env.NODE_ENV === "production"
-          ? ("none" as const)
-          : ("lax" as const),
+      secure: isProduction,
+      sameSite: "lax" as const,
+      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     };
