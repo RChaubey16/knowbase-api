@@ -56,8 +56,8 @@ export class AuthController {
     };
 
     // Set cookies
-    res.cookie("accessToken", accessToken, cookieOptions);
-    res.cookie("refreshToken", refreshToken, cookieOptions);
+    res.cookie("kb_accessToken", accessToken, cookieOptions);
+    res.cookie("kb_refreshToken", refreshToken, cookieOptions);
 
     // Redirect to frontend
     return res.redirect(process.env.FRONT_END_URL!);
@@ -69,7 +69,7 @@ export class AuthController {
   @Post("refresh")
   async refresh(@Req() req: Request, @Res() res: Response) {
     const refreshToken = (req.cookies as Record<string, string> | undefined)
-      ?.refreshToken;
+      ?.kb_refreshToken;
 
     if (!refreshToken) {
       throw new UnauthorizedException();
@@ -96,8 +96,8 @@ export class AuthController {
     };
 
     // rotate cookies
-    res.cookie("accessToken", tokens.accessToken, cookieOptions);
-    res.cookie("refreshToken", tokens.refreshToken, cookieOptions);
+    res.cookie("kb_accessToken", tokens.accessToken, cookieOptions);
+    res.cookie("kb_refreshToken", tokens.refreshToken, cookieOptions);
 
     return res.send({ success: true });
   }

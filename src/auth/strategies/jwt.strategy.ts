@@ -8,7 +8,7 @@ const cookieExtractor = (req: Request): string | null => {
   if (!req || !req.cookies) {
     return null;
   }
-  return (req.cookies["accessToken"] as string | undefined) ?? null;
+  return (req.cookies["kb_accessToken"] as string | undefined) ?? null;
 };
 
 @Injectable()
