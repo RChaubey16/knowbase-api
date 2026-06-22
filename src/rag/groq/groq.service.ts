@@ -1,44 +1,41 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import {
-  GoogleGenerativeAI,
-  GenerativeModel,
-  GenerateContentResult,
-} from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { Chunk, GroundedPromptInput } from "../rag.types";
 
 export type { Chunk, GroundedPromptInput };
 
 @Injectable()
-export class GeminiService {
-  private readonly model: GenerativeModel;
-  private readonly logger = new Logger(GeminiService.name);
+export class GroqService {
+  private readonly client: Groq;
+  private readonly model: string;
+  private readonly logger = new Logger(GroqService.name);
 
   constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>("GEMINI_API_KEY");
+    const apiKey = this.configService.get<string>("GROQ_API_KEY");
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not defined in the environment");
+      throw new Error("GROQ_API_KEY is not defined in the environment");
     }
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-
-    this.model = genAI.getGenerativeModel({
-      model: this.configService.get<string>("GEMINI_MODEL", "gemini-2.0-flash"),
-    });
+    this.client = new Groq({ apiKey });
+    this.model = this.configService.get<string>(
+      "GROQ_MODEL",
+      "llama-3.3-70b-versatile",
+    );
   }
 
   async generate(prompt: string, chunks: Chunk[]): Promise<string> {
     try {
-      const groundedPrompt = this.buildGroundedPrompt({
-        query: prompt,
-        chunks,
+      const groundedPrompt = this.buildGroundedPrompt({ query: prompt, chunks });
+
+      const completion = await this.client.chat.completions.create({
+        model: this.model,
+        messages: [{ role: "user", content: groundedPrompt }],
+        temperature: 0.3,
+        max_tokens: 1024,
       });
 
-      const result: GenerateContentResult =
-        await this.model.generateContent(groundedPrompt);
-      const response = result.response;
-      const text = response.text();
-
+      const text = completion.choices[0]?.message?.content;
       if (!text) {
         throw new Error("Model generated an empty response");
       }
@@ -50,7 +47,7 @@ export class GeminiService {
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       this.logger.error(
-        `Error generating content from Gemini: ${errorMessage}`,
+        `Error generating content from Groq: ${errorMessage}`,
         errorStack,
       );
       throw error;

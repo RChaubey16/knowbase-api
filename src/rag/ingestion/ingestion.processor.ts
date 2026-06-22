@@ -69,7 +69,7 @@ export class IngestionProcessor extends WorkerHost {
         orderedRecords.map((chunk, index) => ({
           chunkId: chunk.id,
           embedding: embeddings[index],
-          model: "jina-embeddings-v2-base-en",
+          model: "sentence-transformers/all-mpnet-base-v2",
         })),
       );
 

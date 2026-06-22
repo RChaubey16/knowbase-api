@@ -5,7 +5,7 @@ import { RagController } from "./rag.controller";
 import { IngestionProcessor } from "./ingestion/ingestion.processor";
 import { ChunkingService } from "./chunking/chunking.service";
 import { EmbeddingService } from "./embedding/embedding.service";
-import { GeminiService } from "./gemini/gemini.service";
+import { GroqService } from "./groq/groq.service";
 import { SupabaseModule } from "src/supabase/supabase.module";
 
 @Module({
@@ -20,9 +20,9 @@ import { SupabaseModule } from "src/supabase/supabase.module";
     RagService,
     ChunkingService,
     EmbeddingService,
-    GeminiService,
+    GroqService,
     IngestionProcessor,
   ],
-  exports: [RagService, GeminiService],
+  exports: [RagService, GroqService],
 })
 export class RagModule {}

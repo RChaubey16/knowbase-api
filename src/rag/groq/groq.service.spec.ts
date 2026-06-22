@@ -1,28 +1,27 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { ConfigService } from "@nestjs/config";
-import { GeminiService } from "./gemini.service";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GroqService } from "./groq.service";
+import Groq from "groq-sdk";
 
-jest.mock("@google/generative-ai");
+jest.mock("groq-sdk");
 
-describe("GeminiService", () => {
-  let service: GeminiService;
-  let configService: ConfigService;
+describe("GroqService", () => {
+  let service: GroqService;
 
-  const mockModel = {
-    generateContent: jest.fn(),
-  };
-
-  const mockGenAI = {
-    getGenerativeModel: jest.fn().mockReturnValue(mockModel),
-  };
+  const mockCreate = jest.fn();
 
   beforeEach(async () => {
-    (GoogleGenerativeAI as jest.Mock).mockImplementation(() => mockGenAI);
+    (Groq as jest.Mock).mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: mockCreate,
+        },
+      },
+    }));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        GeminiService,
+        GroqService,
         {
           provide: ConfigService,
           useValue: {
@@ -32,9 +31,10 @@ describe("GeminiService", () => {
       ],
     }).compile();
 
-    service = module.get<GeminiService>(GeminiService);
-    configService = module.get<ConfigService>(ConfigService);
+    service = module.get<GroqService>(GroqService);
   });
+
+  afterEach(() => jest.clearAllMocks());
 
   it("should be defined", () => {
     expect(service).toBeDefined();
@@ -65,26 +65,20 @@ describe("GeminiService", () => {
 
   describe("generate", () => {
     it("should return generated text on success", async () => {
-      const mockResult = {
-        response: {
-          text: jest.fn().mockReturnValue("This is the answer."),
-        },
-      };
-      mockModel.generateContent.mockResolvedValue(mockResult);
+      mockCreate.mockResolvedValue({
+        choices: [{ message: { content: "This is the answer." } }],
+      });
 
       const result = await service.generate("query", [{ content: "chunk" }]);
 
       expect(result).toBe("This is the answer.");
-      expect(mockModel.generateContent).toHaveBeenCalled();
+      expect(mockCreate).toHaveBeenCalled();
     });
 
     it("should throw error if model returns empty response", async () => {
-      const mockResult = {
-        response: {
-          text: jest.fn().mockReturnValue(""),
-        },
-      };
-      mockModel.generateContent.mockResolvedValue(mockResult);
+      mockCreate.mockResolvedValue({
+        choices: [{ message: { content: "" } }],
+      });
 
       await expect(
         service.generate("query", [{ content: "chunk" }]),
@@ -93,7 +87,7 @@ describe("GeminiService", () => {
 
     it("should log and throw error on failure", async () => {
       const error = new Error("API Failure");
-      mockModel.generateContent.mockRejectedValue(error);
+      mockCreate.mockRejectedValue(error);
 
       await expect(
         service.generate("query", [{ content: "chunk" }]),
