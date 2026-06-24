@@ -13,9 +13,6 @@ The backend for Knowbase. A REST API built with NestJS that handles user account
 ![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)
 ![Jest](https://img.shields.io/badge/Jest-C21325?style=flat&logo=jest&logoColor=white)
 
-> [!WARNING]
-> **This project is currently under active development.** Features and APIs may change without notice.
-
 ## Tech Stack
 
 | Technology | Role |
@@ -116,7 +113,39 @@ pnpm drizzle-kit generate  # generate DB migration
 
 ## API Overview
 
-See [`docs/api.md`](../docs/api.md) for the full endpoint reference and [`docs/postman.md`](../docs/postman.md) for a Postman testing guide.
+```
+GET  /auth/google
+GET  /auth/google/callback
+POST /auth/refresh
+GET  /auth/me
+POST /auth/logout
+
+POST   /organisations
+GET    /organisations
+GET    /organisations/:slug
+GET    /organisations/:slug/me
+POST   /organisations/members          # X-Organisation header required
+DELETE /organisations/:id
+
+GET    /workspaces                     # X-Organisation header required
+POST   /workspaces
+GET    /workspaces/:slug
+GET    /workspaces/:slug/me
+DELETE /workspaces/:id
+POST   /workspaces/members
+
+GET    /workspaces/:workspace/documents
+POST   /workspaces/:workspace/documents
+GET    /workspaces/:workspace/documents/search?q=...&mode=simple|rag
+GET    /workspaces/:workspace/documents/:documentId
+PUT    /workspaces/:workspace/documents/:documentId
+DELETE /workspaces/:workspace/documents/:documentId          # soft delete (204)
+POST   /workspaces/:workspace/documents/:documentId/reindex  # re-enqueues for chunking + embedding
+
+POST /rag/query    # { workspaceId, query, topK? } → { answer } — requires X-Organisation header
+```
+
+All workspace and document routes require both `JwtAuthGuard` (reads `accessToken` cookie) and `OrganisationContextGuard` (reads `X-Organisation` header — accepts org ID or slug).
 
 ## License
 
