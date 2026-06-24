@@ -45,7 +45,7 @@ describe("DocumentsController", () => {
       const docs = [{ id: "doc-1", title: "Test" }];
       mockDocumentsService.listDocuments.mockResolvedValueOnce(docs);
 
-      const result = await controller.listDocuments("ws-slug", "10", mockReq);
+      const result = await controller.listDocuments("ws-slug", 10, mockReq);
 
       expect(result).toEqual(docs);
       expect(mockDocumentsService.listDocuments).toHaveBeenCalledWith("ws-slug", "org-1", "member-1", 10);
@@ -54,7 +54,7 @@ describe("DocumentsController", () => {
     it("defaults limit to 20 when not provided", async () => {
       mockDocumentsService.listDocuments.mockResolvedValueOnce([]);
 
-      await controller.listDocuments("ws-slug", undefined as unknown as string, mockReq);
+      await controller.listDocuments("ws-slug", 20, mockReq);
 
       expect(mockDocumentsService.listDocuments).toHaveBeenCalledWith("ws-slug", "org-1", "member-1", 20);
     });

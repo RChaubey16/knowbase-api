@@ -22,13 +22,23 @@ export class GeminiService {
 
     const genAI = new GoogleGenerativeAI(apiKey);
 
+    // Instantiate the model once at startup to avoid per-request SDK overhead
     this.model = genAI.getGenerativeModel({
       model: this.configService.get<string>("GEMINI_MODEL", "gemini-2.0-flash"),
     });
   }
 
+  /**
+   * Generate an answer grounded in the provided document chunks
+   *
+   * @param prompt - The user's original query
+   * @param chunks - Retrieved document chunks used as context for generation
+   * @returns The model's text response
+   * @throws Error if the model returns an empty response or if the API call fails
+   */
   async generate(prompt: string, chunks: Chunk[]): Promise<string> {
     try {
+      // Build a system prompt that restricts the model to the provided context
       const groundedPrompt = this.buildGroundedPrompt({
         query: prompt,
         chunks,
@@ -57,7 +67,14 @@ export class GeminiService {
     }
   }
 
+  /**
+   * Assemble a retrieval-augmented prompt that constrains the model to the given chunks
+   *
+   * @param input - Object containing the query and the retrieved chunks
+   * @returns Formatted prompt string ready to send to the Gemini API
+   */
   buildGroundedPrompt(input: GroundedPromptInput): string {
+    // Format each chunk with a numbered label so the model can reference them clearly
     const context = input.chunks
       .map((c, i) => `Context ${i + 1}:\n${c.content}`)
       .join("\n\n");

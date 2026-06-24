@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { AuthService } from "./auth.service";
@@ -20,9 +21,22 @@ import type { RequestWithJwtUser } from "./interfaces/request-with-jwt-user.inte
 @Controller("auth")
 export class AuthController {
   constructor(
-    private authService: AuthService,
-    private jwtService: JwtService,
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
+
+  private buildCookieOptions() {
+    const isProduction = this.configService.get<string>("NODE_ENV") === "production";
+    return {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: "lax" as const,
+      domain: isProduction ? this.configService.get<string>("COOKIE_DOMAIN") : undefined,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    };
+  }
 
   /**
    * GET /auth/google
@@ -45,22 +59,11 @@ export class AuthController {
     const { accessToken, refreshToken } =
       await this.authService.handleGoogleLogin(req.user);
 
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax" as const,
-      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    };
-
-    // Set cookies
+    const cookieOptions = this.buildCookieOptions();
     res.cookie("kb_accessToken", accessToken, cookieOptions);
     res.cookie("kb_refreshToken", refreshToken, cookieOptions);
 
-    // Redirect to frontend
-    return res.redirect(process.env.FRONT_END_URL!);
+    return res.redirect(this.configService.get<string>("FRONT_END_URL", "http://localhost:3001"));
   }
 
   /**
@@ -77,7 +80,7 @@ export class AuthController {
 
     const payload = await this.jwtService.verifyAsync<JwtPayload>(
       refreshToken,
-      { secret: process.env.JWT_REFRESH_SECRET },
+      { secret: this.configService.get<string>("JWT_REFRESH_SECRET") },
     );
 
     const tokens = await this.authService.handleRefreshTokens(
@@ -85,17 +88,7 @@ export class AuthController {
       refreshToken,
     );
 
-    const isProduction = process.env.NODE_ENV === "production";
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "lax" as const,
-      domain: isProduction ? process.env.COOKIE_DOMAIN : undefined,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    };
-
-    // rotate cookies
+    const cookieOptions = this.buildCookieOptions();
     res.cookie("kb_accessToken", tokens.accessToken, cookieOptions);
     res.cookie("kb_refreshToken", tokens.refreshToken, cookieOptions);
 

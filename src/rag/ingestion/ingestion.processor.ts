@@ -1,4 +1,4 @@
-import { Inject } from "@nestjs/common";
+import { Inject, Logger } from "@nestjs/common";
 import { OnWorkerEvent, Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { eq } from "drizzle-orm";
@@ -14,10 +14,12 @@ import * as schema from "../../db/schema";
   limiter: { duration: 10000, max: 20 },
 })
 export class IngestionProcessor extends WorkerHost {
+  private readonly logger = new Logger(IngestionProcessor.name);
+
   constructor(
     private readonly chunkingService: ChunkingService,
     private readonly embeddingService: EmbeddingService,
-    @Inject("DB") private db: PostgresJsDatabase<typeof schema>,
+    @Inject("DB") private readonly db: PostgresJsDatabase<typeof schema>,
   ) {
     super();
   }
@@ -29,7 +31,7 @@ export class IngestionProcessor extends WorkerHost {
         break;
 
       default:
-        console.log(`Unknown job name: ${job.name}`);
+        this.logger.warn(`Unknown job name: ${job.name}`);
     }
   }
 
@@ -79,14 +81,14 @@ export class IngestionProcessor extends WorkerHost {
         .set({ status: "ready", updatedAt: new Date() })
         .where(eq(schema.documents.id, documentId));
 
-      console.log(`Document ${documentId} is now ready`);
+      this.logger.log(`Document ${documentId} indexed successfully`);
 
       return {
         status: true,
         message: "Document is now ready",
       };
     } catch (error) {
-      console.error("Error in ingestManualDoc:", error);
+      this.logger.error("Failed to ingest document", error instanceof Error ? error.stack : String(error));
 
       // Update document status to failed
       await this.db
@@ -100,17 +102,16 @@ export class IngestionProcessor extends WorkerHost {
 
   @OnWorkerEvent("active")
   onAdded(job: Job) {
-    console.log(`JOB ADDED`, job.id);
+    this.logger.debug(`Job active: ${job.id}`);
   }
 
   @OnWorkerEvent("completed")
   onCompleted(job: Job) {
-    console.log(`JOB COMPLETED`, job.id);
+    this.logger.log(`Job completed: ${job.id}`);
   }
 
   @OnWorkerEvent("failed")
   onFailed(job: Job) {
-    console.log(`JOB FAILED`, job.id);
-    console.log(`Attempt Number: ${job.attemptsMade}`);
+    this.logger.error(`Job failed: ${job.id} (attempt ${job.attemptsMade})`);
   }
 }

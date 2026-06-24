@@ -13,7 +13,7 @@ import { WorkspacesService } from "./workspaces.service";
 import { CreateWorkspaceDto } from "./dto/create-workspace.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
-import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
+import type { RequestWithJwtAndOrg } from "../organisations/interfaces/request-with-org.interface";
 import { AddWorkspaceMembersDto } from "./dto/add-workspace-members.dto";
 import { UpdateWorkspaceDto } from "./dto/update-workspace.dto";
 

@@ -14,18 +14,27 @@ import { Chunk } from "./rag.types";
 @Injectable()
 export class RagService {
   constructor(
-    @Inject("DB") private db: PostgresJsDatabase<typeof schema>,
+    @Inject("DB") private readonly db: PostgresJsDatabase<typeof schema>,
     @InjectQueue("rag-ingestion") private readonly ragQueue: Queue,
     private readonly supabase: SupabaseService,
     private readonly embeddingService: EmbeddingService,
     private readonly geminiService: GeminiService,
   ) {}
 
+  /**
+   * Enqueue a document for chunking and embedding via the BullMQ ingestion worker
+   *
+   * @param documentId - UUID of the document to index
+   * @param documentContents - Plain-text content to chunk and embed
+   * @param force - When true, existing chunks are deleted before re-indexing
+   * @returns Status object indicating whether the job was queued or skipped
+   */
   async indexDocument(
     documentId: string,
     documentContents: string,
     force = false,
   ) {
+    // Check whether the document already has chunks to avoid duplicate indexing
     const existingChunks = await this.db
       .select({ id: schema.documentChunks.id })
       .from(schema.documentChunks)
@@ -42,6 +51,7 @@ export class RagService {
         .where(eq(schema.documentChunks.documentId, documentId));
     }
 
+    // Add to the queue with exponential backoff — the worker handles chunking and embedding
     await this.ragQueue.add(
       "ingest-manual-document",
       { documentId, documentContents },
@@ -51,14 +61,23 @@ export class RagService {
     return { status: true, message: "Document indexing job added to Queue" };
   }
 
+  /**
+   * Retrieve the most relevant document chunks for a query and generate a grounded answer
+   *
+   * @param input - Object containing workspaceId, query text, and optional topK limit
+   * @returns Generated answer string grounded in the retrieved chunks
+   * @throws PostgrestError if the Supabase vector search RPC fails
+   */
   async answerQuery(input: {
     workspaceId: string;
     query: string;
     topK?: number;
   }) {
+    // Embed the query so it can be compared against stored chunk embeddings
     const queryEmbedding = await this.embeddingService.embedQuery(input.query);
     const flatEmbedding = queryEmbedding[0];
 
+    // Run cosine similarity search via the Supabase pgvector RPC
     const { data, error } = (await this.supabase
       .getClient()
       .rpc("match_document_chunks", {
@@ -69,6 +88,7 @@ export class RagService {
 
     if (error) throw error;
 
+    // Pass the retrieved chunks to Gemini to produce a grounded answer
     return this.geminiService.generate(input.query, data || []);
   }
 }

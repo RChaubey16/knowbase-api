@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 import { UsersService } from "../users/users.service";
 
 const mockUsersService = {
@@ -13,6 +14,10 @@ const mockUsersService = {
 
 const mockJwtService = {
   signAsync: jest.fn().mockResolvedValue("mock-token"),
+};
+
+const mockConfigService = {
+  get: jest.fn().mockReturnValue("test-secret"),
 };
 
 describe("AuthService", () => {
@@ -27,6 +32,7 @@ describe("AuthService", () => {
         AuthService,
         { provide: UsersService, useValue: mockUsersService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
 

@@ -2,6 +2,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtService } from "@nestjs/jwt";
+import { ConfigService } from "@nestjs/config";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import type { RequestWithJwtUser } from "./interfaces/request-with-jwt-user.interface";
@@ -17,6 +18,10 @@ const mockJwtService = {
   verifyAsync: jest.fn(),
 };
 
+const mockConfigService = {
+  get: jest.fn().mockImplementation((key: string, defaultVal?: unknown) => defaultVal ?? "test-value"),
+};
+
 describe("AuthController", () => {
   let controller: AuthController;
 
@@ -27,6 +32,7 @@ describe("AuthController", () => {
       providers: [
         { provide: AuthService, useValue: mockAuthService },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: ConfigService, useValue: mockConfigService },
       ],
     })
       .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })

@@ -14,6 +14,8 @@ import {
   BadRequestException,
   UseInterceptors,
   UploadedFile,
+  ParseIntPipe,
+  DefaultValuePipe,
 } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { DocumentsService } from "./documents.service";
@@ -21,7 +23,7 @@ import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
-import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
+import type { RequestWithJwtAndOrg } from "../organisations/interfaces/request-with-org.interface";
 
 @Controller("workspaces/:workspace/documents")
 @UseGuards(JwtAuthGuard, OrganisationContextGuard)
@@ -34,14 +36,14 @@ export class DocumentsController {
   @Get()
   listDocuments(
     @Param("workspace") workspace: string,
-    @Query("limit") limit: string,
+    @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit: number,
     @Req() req: RequestWithJwtAndOrg,
   ) {
     return this.documentsService.listDocuments(
       workspace,
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
-      Number(limit) || 20,
+      limit,
     );
   }
 
