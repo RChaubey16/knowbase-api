@@ -201,12 +201,10 @@ export class DocumentsService {
       .select({
         id: schema.documents.id,
         title: schema.documents.title,
-        content: schema.documentContents.rawContent,
         type: schema.documents.type,
         source: schema.documents.source,
         sourceUrl: schema.documents.sourceUrl,
         status: schema.documents.status,
-        // Truncate content to avoid sending large payloads in list views
         snippet: sql<string>`left(${schema.documentContents.rawContent}, 120)`,
         // EXISTS subquery is cheaper than a COUNT and avoids a separate round-trip
         isIndexed: sql<boolean>`exists(select 1 from ${schema.documentChunks} where ${schema.documentChunks.documentId} = ${schema.documents.id})`,
