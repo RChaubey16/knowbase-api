@@ -109,7 +109,16 @@ export class AuthController {
    */
   @UseGuards(JwtAuthGuard)
   @Post("logout")
-  logout(@Req() req: RequestWithJwtUser) {
-    return this.authService.logout(req.user.userId);
+  async logout(@Req() req: RequestWithJwtUser, @Res() res: Response) {
+    await this.authService.logout(req.user.userId);
+
+    // Clear both cookies from the browser so the session is fully terminated.
+    // Options must match the original Set-Cookie (path, domain, secure, sameSite)
+    // so the browser accepts the deletion.
+    const { maxAge: _maxAge, ...clearOptions } = this.buildCookieOptions();
+    res.clearCookie("kb_accessToken", clearOptions);
+    res.clearCookie("kb_refreshToken", clearOptions);
+
+    return res.send({ success: true });
   }
 }
