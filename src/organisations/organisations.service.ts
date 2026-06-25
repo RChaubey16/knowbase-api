@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { PostgresJsDatabase } from "drizzle-orm/postgres-js";
@@ -18,6 +19,8 @@ import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 
 @Injectable()
 export class OrganisationsService {
+  private readonly logger = new Logger(OrganisationsService.name);
+
   constructor(
     @Inject("DB")
     private readonly db: PostgresJsDatabase<typeof schema>,
@@ -66,6 +69,7 @@ export class OrganisationsService {
           role: "owner",
         });
 
+        this.logger.log(`Organisation created: ${org.id} (slug: ${org.slug}) by user ${userId}`);
         return org;
       });
     } catch (err) {

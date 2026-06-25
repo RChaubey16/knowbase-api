@@ -3,6 +3,7 @@ import { OrganisationsController } from "./organisations.controller";
 import { OrganisationsService } from "./organisations.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "./guards/organisation-context.guard";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 import type { RequestWithJwtAndOrg } from "./interfaces/request-with-org.interface";
 
@@ -37,6 +38,7 @@ describe("OrganisationsController", () => {
     })
       .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
       .overrideGuard(OrganisationContextGuard).useValue({ canActivate: () => true })
+      .overrideGuard(DemoReadOnlyGuard).useValue({ canActivate: () => true })
       .compile();
     controller = module.get<OrganisationsController>(OrganisationsController);
   });

@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
+import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 
 import { GoogleAuthGuard } from "./guards/google-auth.guard";
 import { AuthService } from "./auth.service";
@@ -70,6 +71,8 @@ export class AuthController {
    * POST /auth/refresh
    */
   @Post("refresh")
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   async refresh(@Req() req: Request, @Res() res: Response) {
     const refreshToken = (req.cookies as Record<string, string> | undefined)
       ?.kb_refreshToken;
@@ -78,10 +81,15 @@ export class AuthController {
       throw new UnauthorizedException();
     }
 
-    const payload = await this.jwtService.verifyAsync<JwtPayload>(
-      refreshToken,
-      { secret: this.configService.get<string>("JWT_REFRESH_SECRET") },
-    );
+    let payload: JwtPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<JwtPayload>(
+        refreshToken,
+        { secret: this.configService.get<string>("JWT_REFRESH_SECRET") },
+      );
+    } catch {
+      throw new UnauthorizedException();
+    }
 
     const tokens = await this.authService.handleRefreshTokens(
       payload.sub,
@@ -101,6 +109,8 @@ export class AuthController {
    * No refresh token — demo sessions simply expire after 7 days.
    */
   @Post("demo")
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 20 } })
   async demoLogin(@Res() res: Response) {
     const { accessToken } = await this.authService.loginDemo();
     res.cookie("kb_accessToken", accessToken, this.buildCookieOptions());

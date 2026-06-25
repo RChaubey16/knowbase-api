@@ -90,7 +90,19 @@ export class IngestionProcessor extends WorkerHost {
     } catch (error) {
       this.logger.error("Failed to ingest document", error instanceof Error ? error.stack : String(error));
 
-      // Update document status to failed
+      // Remove any partially inserted chunks so the document isn't left in a
+      // half-indexed state (chunks without matching embeddings would make
+      // isIndexed appear true while RAG results would be incomplete)
+      await this.db
+        .delete(schema.documentChunks)
+        .where(eq(schema.documentChunks.documentId, data.documentId))
+        .catch((cleanupErr) =>
+          this.logger.error(
+            `Failed to clean up partial chunks for document ${data.documentId}`,
+            cleanupErr instanceof Error ? cleanupErr.stack : String(cleanupErr),
+          ),
+        );
+
       await this.db
         .update(schema.documents)
         .set({ status: "failed", updatedAt: new Date() })

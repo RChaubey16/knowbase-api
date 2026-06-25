@@ -3,6 +3,7 @@ import { WorkspacesController } from "./workspaces.controller";
 import { WorkspacesService } from "./workspaces.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
 
 const mockWorkspacesService = {
@@ -33,6 +34,7 @@ describe("WorkspacesController", () => {
     })
       .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
       .overrideGuard(OrganisationContextGuard).useValue({ canActivate: () => true })
+      .overrideGuard(DemoReadOnlyGuard).useValue({ canActivate: () => true })
       .compile();
 
     controller = module.get<WorkspacesController>(WorkspacesController);
