@@ -432,6 +432,7 @@ export class DocumentsService {
         d.title,
         d.type,
         d.status,
+        d.updated_at,
         dc.raw_content AS snippet,
         ts_rank(
           d.search_vector || dc.search_vector,
