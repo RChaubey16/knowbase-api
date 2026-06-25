@@ -1,6 +1,7 @@
 import {
   Injectable,
   ForbiddenException,
+  Logger,
   NotFoundException,
   BadRequestException,
   Inject,
@@ -19,6 +20,8 @@ import { RagService } from "src/rag/rag.service";
 
 @Injectable()
 export class DocumentsService {
+  private readonly logger = new Logger(DocumentsService.name);
+
   constructor(
     @Inject("DB")
     private readonly db: PostgresJsDatabase<typeof schema>,
@@ -514,6 +517,7 @@ export class DocumentsService {
       .set({ status: "processing", updatedAt: new Date() })
       .where(eq(schema.documents.id, documentId));
 
+    this.logger.log(`Reindex triggered for document ${documentId} in workspace ${workspaceId}`);
     // force=true clears stale chunks before re-ingesting
     await this.ragService.indexDocument(doc.id, doc.content, true);
   }

@@ -2,6 +2,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import { and, eq, inArray } from "drizzle-orm";
@@ -17,6 +18,8 @@ import { AddWorkspaceMembersDto } from "./dto/add-workspace-members.dto";
 
 @Injectable()
 export class WorkspacesService {
+  private readonly logger = new Logger(WorkspacesService.name);
+
   constructor(
     @Inject("DB") private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
@@ -86,6 +89,7 @@ export class WorkspacesService {
         role: "owner",
       });
 
+      this.logger.log(`Workspace created: ${workspace.id} (slug: ${workspace.slug})`);
       return workspace;
     });
   }

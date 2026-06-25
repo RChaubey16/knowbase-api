@@ -3,6 +3,7 @@ import { DocumentsController } from "./documents.controller";
 import { DocumentsService } from "./documents.service";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 import type { RequestWithJwtAndOrg } from "src/organisations/interfaces/request-with-org.interface";
 
 const mockDocumentsService = {
@@ -32,6 +33,7 @@ describe("DocumentsController", () => {
     })
       .overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true })
       .overrideGuard(OrganisationContextGuard).useValue({ canActivate: () => true })
+      .overrideGuard(DemoReadOnlyGuard).useValue({ canActivate: () => true })
       .compile();
     controller = module.get<DocumentsController>(DocumentsController);
   });

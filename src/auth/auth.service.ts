@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, Logger, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
@@ -9,6 +9,8 @@ import { users } from "../db/schema/users";
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -79,6 +81,7 @@ export class AuthService {
         avatar: googleUser.avatar,
         provider: "google",
       });
+      this.logger.log(`New user registered via Google OAuth: ${user.id}`);
     }
 
     // Issue tokens and persist the refresh token hash atomically
@@ -108,6 +111,7 @@ export class AuthService {
     const isValid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
 
     if (!isValid) {
+      this.logger.warn(`Invalid refresh token attempt for user ${userId}`);
       throw new UnauthorizedException();
     }
 
@@ -116,6 +120,31 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     return tokens;
+  }
+
+  /**
+   * Issues a long-lived (7d) access token for the pre-seeded demo user.
+   * No refresh token is issued — avoids shared-session invalidation when
+   * many visitors use the same demo account simultaneously.
+   */
+  async loginDemo() {
+    const demoUserId = this.configService.get<string>("DEMO_USER_ID");
+    if (!demoUserId) {
+      throw new ServiceUnavailableException("Demo mode is not configured");
+    }
+
+    const user = await this.usersService.findById(demoUserId);
+    if (!user) {
+      throw new ServiceUnavailableException("Demo user not found");
+    }
+
+    const accessToken = await this.jwtService.signAsync(
+      { sub: user.id, email: user.email },
+      { expiresIn: "7d" },
+    );
+
+    this.logger.log(`Demo login issued for user ${user.id}`);
+    return { accessToken };
   }
 
   /**

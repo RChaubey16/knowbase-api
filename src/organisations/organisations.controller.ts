@@ -11,6 +11,7 @@ import {
 } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "./guards/organisation-context.guard";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 import { OrganisationsService } from "./organisations.service";
 import type { RequestWithJwtUser } from "../auth/interfaces/request-with-jwt-user.interface";
 import { CreateOrganisationDto } from "./dto/create-organisation.dto";
@@ -19,7 +20,7 @@ import type { RequestWithJwtAndOrg } from "./interfaces/request-with-org.interfa
 import { AddOrganisationMembersDto } from "./dto/add-org-members.dto";
 
 @Controller("organisations")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, DemoReadOnlyGuard)
 export class OrganisationsController {
   constructor(private readonly organisationsService: OrganisationsService) {}
 

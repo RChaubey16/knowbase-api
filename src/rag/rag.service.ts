@@ -1,4 +1,4 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, Logger } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { eq } from "drizzle-orm";
@@ -13,6 +13,8 @@ import { Chunk } from "./rag.types";
 
 @Injectable()
 export class RagService {
+  private readonly logger = new Logger(RagService.name);
+
   constructor(
     @Inject("DB") private readonly db: PostgresJsDatabase<typeof schema>,
     @InjectQueue("rag-ingestion") private readonly ragQueue: Queue,
@@ -46,6 +48,7 @@ export class RagService {
         return { status: true, message: "Document is already indexed" };
       }
       // Delete stale chunks; cascade removes their embeddings
+      this.logger.log(`Force re-index: clearing ${existingChunks.length} stale chunk(s) for document ${documentId}`);
       await this.db
         .delete(schema.documentChunks)
         .where(eq(schema.documentChunks.documentId, documentId));
@@ -88,6 +91,7 @@ export class RagService {
 
     if (error) throw error;
 
+    this.logger.log(`RAG query in workspace ${input.workspaceId}: retrieved ${(data || []).length} chunk(s)`);
     // Pass the retrieved chunks to Gemini to produce a grounded answer
     return this.geminiService.generate(input.query, data || []);
   }
