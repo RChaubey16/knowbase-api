@@ -289,6 +289,87 @@ export class OrganisationsService {
    * @returns Success confirmation object
    * @throws ForbiddenException if the user is not the organisation owner
    */
+  async listOrganisationMembers(organisationId: string, callerMemberId: string) {
+    const [caller] = await this.db
+      .select({ id: organisationMembers.id })
+      .from(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.id, callerMemberId),
+          eq(organisationMembers.organisationId, organisationId),
+        ),
+      );
+
+    if (!caller) {
+      throw new ForbiddenException("Not a member of this organisation");
+    }
+
+    return this.db
+      .select({
+        id: organisationMembers.id,
+        email: users.email,
+        role: organisationMembers.role,
+        joinedAt: organisationMembers.joinedAt,
+      })
+      .from(organisationMembers)
+      .innerJoin(users, eq(organisationMembers.userId, users.id))
+      .where(eq(organisationMembers.organisationId, organisationId));
+  }
+
+  async removeOrganisationMember(
+    organisationId: string,
+    callerMemberId: string,
+    targetMemberId: string,
+  ) {
+    const [caller] = await this.db
+      .select({ role: organisationMembers.role })
+      .from(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.id, callerMemberId),
+          eq(organisationMembers.organisationId, organisationId),
+          inArray(organisationMembers.role, ["owner", "admin"]),
+        ),
+      );
+
+    if (!caller) {
+      throw new ForbiddenException("Insufficient permissions to remove members");
+    }
+
+    const [target] = await this.db
+      .select({ role: organisationMembers.role })
+      .from(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.id, targetMemberId),
+          eq(organisationMembers.organisationId, organisationId),
+        ),
+      );
+
+    if (!target) {
+      throw new NotFoundException("Member not found");
+    }
+
+    if (target.role === "owner") {
+      throw new ForbiddenException("Cannot remove the organisation owner");
+    }
+
+    if (caller.role === "admin" && target.role === "admin") {
+      throw new ForbiddenException("Admins cannot remove other admins");
+    }
+
+    await this.db
+      .delete(organisationMembers)
+      .where(
+        and(
+          eq(organisationMembers.id, targetMemberId),
+          eq(organisationMembers.organisationId, organisationId),
+        ),
+      );
+
+    return { success: true };
+  }
+
   async deleteOrganisation(userId: string, organisationId: string) {
     // Only the owner can delete the organisation
     const [member] = await this.db

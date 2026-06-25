@@ -267,6 +267,116 @@ export class WorkspacesService {
    * @throws ForbiddenException if workspaceId and workspaceSlug are both absent, or caller is not owner
    * @throws NotFoundException if the workspace does not exist
    */
+  async listWorkspaceMembers(
+    workspaceSlug: string,
+    organisationId: string,
+    callerMemberId: string,
+  ) {
+    const [workspace] = await this.db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.slug, workspaceSlug),
+          eq(workspaces.organisationId, organisationId),
+        ),
+      )
+      .limit(1);
+
+    if (!workspace) throw new NotFoundException("Workspace not found");
+
+    const [callerMembership] = await this.db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspace.id),
+          eq(workspaceMembers.organisationMemberId, callerMemberId),
+        ),
+      );
+
+    if (!callerMembership) {
+      throw new ForbiddenException("Not a member of this workspace");
+    }
+
+    return this.db
+      .select({
+        id: workspaceMembers.id,
+        email: users.email,
+        role: workspaceMembers.role,
+        joinedAt: workspaceMembers.joinedAt,
+      })
+      .from(workspaceMembers)
+      .innerJoin(
+        organisationMembers,
+        eq(workspaceMembers.organisationMemberId, organisationMembers.id),
+      )
+      .innerJoin(users, eq(organisationMembers.userId, users.id))
+      .where(eq(workspaceMembers.workspaceId, workspace.id));
+  }
+
+  async removeWorkspaceMember(
+    workspaceSlug: string,
+    organisationId: string,
+    callerMemberId: string,
+    targetMemberId: string,
+  ) {
+    const [workspace] = await this.db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(
+        and(
+          eq(workspaces.slug, workspaceSlug),
+          eq(workspaces.organisationId, organisationId),
+        ),
+      )
+      .limit(1);
+
+    if (!workspace) throw new NotFoundException("Workspace not found");
+
+    const [caller] = await this.db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.workspaceId, workspace.id),
+          eq(workspaceMembers.organisationMemberId, callerMemberId),
+          eq(workspaceMembers.role, "owner"),
+        ),
+      );
+
+    if (!caller) {
+      throw new ForbiddenException("Only workspace owners can remove members");
+    }
+
+    const [target] = await this.db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.id, targetMemberId),
+          eq(workspaceMembers.workspaceId, workspace.id),
+        ),
+      );
+
+    if (!target) throw new NotFoundException("Member not found");
+
+    if (target.role === "owner") {
+      throw new ForbiddenException("Cannot remove the workspace owner");
+    }
+
+    await this.db
+      .delete(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.id, targetMemberId),
+          eq(workspaceMembers.workspaceId, workspace.id),
+        ),
+      );
+
+    return { success: true };
+  }
+
   async addViewers(
     organisationId: string,
     organisationMemberId: string,

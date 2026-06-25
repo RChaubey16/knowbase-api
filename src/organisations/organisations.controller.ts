@@ -58,6 +58,29 @@ export class OrganisationsController {
   }
 
   /**
+   * GET /organisations/:slug/members
+   */
+  @Get(":slug/members")
+  @UseGuards(OrganisationContextGuard)
+  listOrgMembers(@Req() req: RequestWithJwtAndOrg) {
+    return this.organisationsService.listOrganisationMembers(
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+    );
+  }
+
+  /**
+   * GET /organisations/:slug/me
+   */
+  @Get("/:slug/me")
+  getUserOrgDetails(@Req() req: RequestWithJwtUser) {
+    return this.organisationsService.getUserOrgDetails(
+      req.user.userId,
+      req.params.slug,
+    );
+  }
+
+  /**
    * POST /organisations/members
    */
   @Post("members")
@@ -70,6 +93,22 @@ export class OrganisationsController {
       req.organisation.organisationId,
       req.organisation.organisationMemberId,
       dto,
+    );
+  }
+
+  /**
+   * DELETE /organisations/members/:memberId
+   */
+  @Delete("members/:memberId")
+  @UseGuards(OrganisationContextGuard)
+  removeOrgMember(
+    @Req() req: RequestWithJwtAndOrg,
+    @Param("memberId") memberId: string,
+  ) {
+    return this.organisationsService.removeOrganisationMember(
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+      memberId,
     );
   }
 
@@ -91,16 +130,5 @@ export class OrganisationsController {
   @Delete(":id")
   delete(@Req() req: RequestWithJwtUser, @Param("id") id: string) {
     return this.organisationsService.deleteOrganisation(req.user.userId, id);
-  }
-
-  /**
-   * GET /organisations/:slug/me
-   */
-  @Get("/:slug/me")
-  getUserOrgDetails(@Req() req: RequestWithJwtUser) {
-    return this.organisationsService.getUserOrgDetails(
-      req.user.userId,
-      req.params.slug,
-    );
   }
 }

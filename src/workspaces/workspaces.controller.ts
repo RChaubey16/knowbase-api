@@ -87,6 +87,34 @@ export class WorkspacesController {
   }
 
   /**
+   * GET /workspaces/:slug/members
+   */
+  @Get(":slug/members")
+  listWorkspaceMembers(@Req() req: RequestWithJwtAndOrg) {
+    return this.workspacesService.listWorkspaceMembers(
+      req.params.slug,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+    );
+  }
+
+  /**
+   * DELETE /workspaces/:slug/members/:memberId
+   */
+  @Delete(":slug/members/:memberId")
+  removeWorkspaceMember(
+    @Req() req: RequestWithJwtAndOrg,
+    @Param("memberId") memberId: string,
+  ) {
+    return this.workspacesService.removeWorkspaceMember(
+      req.params.slug,
+      req.organisation.organisationId,
+      req.organisation.organisationMemberId,
+      memberId,
+    );
+  }
+
+  /**
    * POST /workspaces/members
    */
   @Post("members")
