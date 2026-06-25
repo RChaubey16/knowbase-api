@@ -7,6 +7,7 @@ import { ChunkingService } from "./chunking/chunking.service";
 import { EmbeddingService } from "./embedding/embedding.service";
 import { GeminiService } from "./gemini/gemini.service";
 import { SupabaseModule } from "src/supabase/supabase.module";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { SupabaseModule } from "src/supabase/supabase.module";
     EmbeddingService,
     GeminiService,
     IngestionProcessor,
+    DemoReadOnlyGuard,
   ],
   exports: [RagService, GeminiService],
 })

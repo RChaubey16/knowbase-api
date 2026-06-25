@@ -96,12 +96,28 @@ export class AuthController {
   }
 
   /**
+   * POST /auth/demo
+   * Issues a 7-day access token for the pre-seeded demo user.
+   * No refresh token — demo sessions simply expire after 7 days.
+   */
+  @Post("demo")
+  async demoLogin(@Res() res: Response) {
+    const { accessToken } = await this.authService.loginDemo();
+    res.cookie("kb_accessToken", accessToken, this.buildCookieOptions());
+    return res.send({ success: true });
+  }
+
+  /**
    * GET /auth/me
    */
   @UseGuards(JwtAuthGuard)
   @Get("me")
   me(@Req() req: RequestWithJwtUser) {
-    return req.user;
+    const demoUserId = this.configService.get<string>("DEMO_USER_ID");
+    return {
+      ...req.user,
+      isDemo: !!demoUserId && req.user.userId === demoUserId,
+    };
   }
 
   /**

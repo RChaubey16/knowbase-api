@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
@@ -116,6 +116,30 @@ export class AuthService {
     await this.updateRefreshToken(user.id, tokens.refreshToken);
 
     return tokens;
+  }
+
+  /**
+   * Issues a long-lived (7d) access token for the pre-seeded demo user.
+   * No refresh token is issued — avoids shared-session invalidation when
+   * many visitors use the same demo account simultaneously.
+   */
+  async loginDemo() {
+    const demoUserId = this.configService.get<string>("DEMO_USER_ID");
+    if (!demoUserId) {
+      throw new ServiceUnavailableException("Demo mode is not configured");
+    }
+
+    const user = await this.usersService.findById(demoUserId);
+    if (!user) {
+      throw new ServiceUnavailableException("Demo user not found");
+    }
+
+    const accessToken = await this.jwtService.signAsync(
+      { sub: user.id, email: user.email },
+      { expiresIn: "7d" },
+    );
+
+    return { accessToken };
   }
 
   /**

@@ -23,10 +23,11 @@ import { CreateDocumentDto } from "./dto/create-document.dto";
 import { UpdateDocumentDto } from "./dto/update-document.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { OrganisationContextGuard } from "../organisations/guards/organisation-context.guard";
+import { DemoReadOnlyGuard } from "../auth/guards/demo-readonly.guard";
 import type { RequestWithJwtAndOrg } from "../organisations/interfaces/request-with-org.interface";
 
 @Controller("workspaces/:workspace/documents")
-@UseGuards(JwtAuthGuard, OrganisationContextGuard)
+@UseGuards(JwtAuthGuard, OrganisationContextGuard, DemoReadOnlyGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
